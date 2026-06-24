@@ -37,20 +37,27 @@ import {
 } from "~/components/ui/tooltip"
 
 export function meta(_: Route.MetaArgs) {
+  const url = "https://smails.dev/"
+  const title = "smails — disposable email for humans & agents"
+  const description =
+    "An instant throwaway inbox for sign-ups, codes, and confirmations — with a REST API, CLI, and MCP server so your agents can read it too. No signup."
+  const image = "https://smails.dev/og.png"
   return [
-    { title: "smails — disposable email for humans & agents" },
-    {
-      name: "description",
-      content:
-        "An instant throwaway inbox for sign-ups, codes, and confirmations — with a REST API, CLI, and MCP server so your agents can read it too. No signup.",
-    },
-    { property: "og:title", content: "smails — disposable email for humans & agents" },
-    {
-      property: "og:description",
-      content:
-        "An instant, anonymous inbox with a REST API, CLI, and MCP server. No sign-up required.",
-    },
+    { title },
+    { name: "description", content: description },
     { property: "og:type", content: "website" },
+    { property: "og:url", content: url },
+    { property: "og:site_name", content: "smails" },
+    { property: "og:title", content: title },
+    { property: "og:description", content: description },
+    { property: "og:image", content: image },
+    { property: "og:image:width", content: "1200" },
+    { property: "og:image:height", content: "630" },
+    { property: "og:image:alt", content: "smails — disposable email for humans and agents" },
+    { name: "twitter:card", content: "summary_large_image" },
+    { name: "twitter:title", content: title },
+    { name: "twitter:description", content: description },
+    { name: "twitter:image", content: image },
   ]
 }
 
