@@ -121,7 +121,7 @@ export default {
 			return;
 		}
 
-		const address = message.to.split("@")[0];
+		const address = message.to.split("@")[0].toLowerCase();
 		const stub = env.MAILBOX.getByName(address);
 
 		const rawBytes = new Uint8Array(await new Response(message.raw).arrayBuffer());

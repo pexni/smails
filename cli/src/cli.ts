@@ -34,7 +34,9 @@ function requireConfig() {
 
 function flag(args: string[], name: string): string | undefined {
 	const i = args.indexOf(name);
-	return i >= 0 ? args[i + 1] : undefined;
+	if (i < 0) return undefined;
+	const value = args[i + 1];
+	return value && !value.startsWith("-") ? value : undefined;
 }
 
 /** Resolve a full message id from a full id or a short prefix (as shown by `inbox`). */

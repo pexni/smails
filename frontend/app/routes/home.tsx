@@ -58,6 +58,7 @@ export function meta(_: Route.MetaArgs) {
     { name: "twitter:title", content: title },
     { name: "twitter:description", content: description },
     { name: "twitter:image", content: image },
+    { name: "twitter:image:alt", content: "smails — disposable email for humans and agents" },
   ]
 }
 
