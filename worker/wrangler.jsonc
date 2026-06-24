@@ -1,0 +1,36 @@
+{
+	"$schema": "node_modules/wrangler/config-schema.json",
+	"name": "smails",
+	"account_id": "a275d70ec37a6046e6778c77d65dd38b",
+	"main": "src/index.ts",
+	"compatibility_date": "2026-06-24",
+	"compatibility_flags": ["nodejs_compat"],
+	"observability": { "enabled": true },
+	"upload_source_maps": true,
+	"routes": [
+		{ "pattern": "smails.dev/*", "zone_name": "smails.dev" }
+	],
+	"assets": {
+		"directory": "../frontend/build/client",
+		"not_found_handling": "single-page-application",
+		"html_handling": "drop-trailing-slash",
+		"run_worker_first": ["/api/*"]
+	},
+	"vars": {
+		"DOMAINS": "smails.dev"
+	},
+	"durable_objects": {
+		"bindings": [
+			{
+				"class_name": "Mailbox",
+				"name": "MAILBOX"
+			}
+		]
+	},
+	"migrations": [
+		{
+			"new_sqlite_classes": ["Mailbox"],
+			"tag": "v1"
+		}
+	]
+}
