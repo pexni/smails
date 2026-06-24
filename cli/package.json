@@ -1,9 +1,22 @@
 {
 	"name": "@smails/cli",
-	"version": "0.0.3",
-	"description": "Temporary email for humans and agents — CLI + MCP server",
+	"version": "0.0.4",
+	"description": "Disposable email for humans and AI agents — a throwaway inbox with a CLI and an MCP server. Let your agent receive verification codes and emails.",
 	"type": "module",
 	"license": "MIT",
+	"keywords": [
+		"email",
+		"disposable-email",
+		"temporary-email",
+		"throwaway-email",
+		"inbox",
+		"mcp",
+		"model-context-protocol",
+		"mcp-server",
+		"ai",
+		"agent",
+		"cli"
+	],
 	"homepage": "https://smails.dev",
 	"repository": {
 		"type": "git",

@@ -1,8 +1,14 @@
 # smails
 
-**Agent-native disposable email.** An instant, anonymous inbox for sign-ups, codes, and confirmations — with a REST API, CLI, and MCP server so your agents can read it too. No signup, no password.
+[![npm](https://img.shields.io/npm/v/@smails/cli?color=000&label=%40smails%2Fcli)](https://www.npmjs.com/package/@smails/cli)
+[![smails.dev](https://img.shields.io/badge/try-smails.dev-000)](https://smails.dev)
+[![MIT](https://img.shields.io/badge/license-MIT-000)](./LICENSE)
 
-→ **[smails.dev](https://smails.dev)**
+**Disposable email for humans and AI agents.** An instant, anonymous throwaway inbox for sign-ups, one-time codes, and confirmations — with a REST API, a CLI, and an **MCP server**, so your AI agent can receive verification emails too. No signup, no password.
+
+→ **[smails.dev](https://smails.dev)** · `npx @smails/cli create`
+
+> Give your agent its own inbox: plug the MCP server into Claude, Cursor, or any MCP client and it can create a mailbox and read incoming mail (verification codes, magic links) on its own.
 
 ## Features
 
