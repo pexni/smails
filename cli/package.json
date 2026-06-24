@@ -1,7 +1,7 @@
 {
 	"name": "@smails/cli",
-	"version": "0.0.6",
-	"mcpName": "dev.smails/email",
+	"version": "0.0.7",
+	"mcpName": "io.github.pexni/smails",
 	"description": "Disposable email for humans and AI agents — a throwaway inbox with a CLI and an MCP server. Let your agent receive verification codes and emails.",
 	"type": "module",
 	"license": "MIT",
