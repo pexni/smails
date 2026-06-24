@@ -7,7 +7,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write # required for npm provenance
+  id-token: write # OIDC for npm trusted publishing (no token needed)
 
 jobs:
   publish:
@@ -24,15 +24,17 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           registry-url: https://registry.npmjs.org
           cache: pnpm
           cache-dependency-path: cli/pnpm-lock.yaml
+
+      # trusted publishing requires npm >= 11.5.1
+      - run: npm install -g npm@latest
 
       - run: pnpm install --frozen-lockfile
 
       - run: pnpm run build
 
-      - run: npm publish --provenance --access public
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # OIDC auth is auto-detected; provenance is automatic for public repos
+      - run: npm publish
