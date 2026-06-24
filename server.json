@@ -9,13 +9,13 @@
     "source": "github",
     "subfolder": "cli"
   },
-  "version": "0.0.8",
+  "version": "0.0.9",
   "packages": [
     {
       "registryType": "npm",
       "registryBaseUrl": "https://registry.npmjs.org",
       "identifier": "@smails/cli",
-      "version": "0.0.8",
+      "version": "0.0.9",
       "transport": {
         "type": "stdio"
       },
