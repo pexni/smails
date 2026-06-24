@@ -1,0 +1,30 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.pexni/smails",
+  "title": "smails",
+  "description": "Disposable email for AI agents: create a throwaway inbox and read verification emails over MCP.",
+  "websiteUrl": "https://smails.dev",
+  "repository": {
+    "url": "https://github.com/pexni/smails",
+    "source": "github",
+    "subfolder": "cli"
+  },
+  "version": "0.0.5",
+  "packages": [
+    {
+      "registryType": "npm",
+      "registryBaseUrl": "https://registry.npmjs.org",
+      "identifier": "@smails/cli",
+      "version": "0.0.5",
+      "transport": {
+        "type": "stdio"
+      },
+      "packageArguments": [
+        {
+          "type": "positional",
+          "value": "mcp"
+        }
+      ]
+    }
+  ]
+}
