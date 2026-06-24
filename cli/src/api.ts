@@ -17,7 +17,21 @@ export class SmailsAPI {
 		if (this.token) {
 			headers["Authorization"] = `Bearer ${this.token}`;
 		}
-		const res = await fetch(`${this.baseUrl}${path}`, { ...options, headers });
+
+		const controller = new AbortController();
+		const timeout = setTimeout(() => controller.abort(), 15000);
+		let res: Response;
+		try {
+			res = await fetch(`${this.baseUrl}${path}`, { ...options, headers, signal: controller.signal });
+		} catch (err) {
+			if (err instanceof Error && err.name === "AbortError") {
+				throw new Error(`Request timed out after 15s (${this.baseUrl})`);
+			}
+			throw new Error(`Network error: cannot reach ${this.baseUrl}`);
+		} finally {
+			clearTimeout(timeout);
+		}
+
 		if (!res.ok) {
 			const body = await res.json().catch(() => ({ error: res.statusText })) as { error?: string };
 			throw new Error(body.error || `HTTP ${res.status}`);

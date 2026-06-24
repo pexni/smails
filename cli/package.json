@@ -1,6 +1,6 @@
 {
 	"name": "@smails/cli",
-	"version": "0.0.2",
+	"version": "0.0.3",
 	"description": "Temporary email for humans and agents — CLI + MCP server",
 	"type": "module",
 	"license": "MIT",

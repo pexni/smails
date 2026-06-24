@@ -1,6 +1,28 @@
 import { SmailsAPI } from "./api.js";
 import { loadConfig, saveConfig } from "./config.js";
 
+const HELP = `smails — disposable email for humans and agents
+
+Usage: smails <command> [options]
+
+Commands:
+  create [--domain <d>]   Create a new mailbox (token saved to ~/.smails)
+  create --new            Replace the current mailbox with a fresh one
+  inbox                   List messages
+  read <id>               Read a message (full id or short prefix)
+  delete <id>             Delete a message (full id or short prefix)
+  whoami                  Show the current mailbox address
+  mcp                     Start the MCP server (for AI agents)
+
+Options:
+  -h, --help              Show this help
+  -v, --version           Show version
+
+Env:
+  SMAILS_API_URL          Override the API base URL (default https://smails.dev)`;
+
+const FULL_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function requireConfig() {
 	const config = loadConfig();
 	if (!config) {
@@ -8,6 +30,27 @@ function requireConfig() {
 		process.exit(1);
 	}
 	return config;
+}
+
+function flag(args: string[], name: string): string | undefined {
+	const i = args.indexOf(name);
+	return i >= 0 ? args[i + 1] : undefined;
+}
+
+/** Resolve a full message id from a full id or a short prefix (as shown by `inbox`). */
+async function resolveMessageId(api: SmailsAPI, idOrPrefix: string): Promise<string> {
+	if (FULL_ID.test(idOrPrefix)) return idOrPrefix;
+	const messages = await api.listMessages();
+	const matches = messages.filter((m) => m.id.startsWith(idOrPrefix));
+	if (matches.length === 0) {
+		console.error(`No message found starting with "${idOrPrefix}".`);
+		process.exit(1);
+	}
+	if (matches.length > 1) {
+		console.error(`"${idOrPrefix}" is ambiguous (${matches.length} matches). Use more characters.`);
+		process.exit(1);
+	}
+	return matches[0].id;
 }
 
 async function create(args: string[]) {
@@ -19,7 +62,7 @@ async function create(args: string[]) {
 		return;
 	}
 	const api = new SmailsAPI();
-	const result = await api.createMailbox();
+	const result = await api.createMailbox(flag(args, "--domain"));
 	saveConfig({ address: result.address, token: result.token });
 	console.log(`Mailbox created: ${result.address}`);
 }
@@ -33,9 +76,9 @@ async function inbox() {
 		return;
 	}
 	for (const msg of messages) {
-		const read = msg.read ? " " : "*";
+		const mark = msg.read ? " " : "*";
 		const date = new Date(msg.received_at).toLocaleString();
-		console.log(`${read} ${msg.id.slice(0, 8)}  ${msg.from_addr.padEnd(30)}  ${msg.subject.slice(0, 50)}  ${date}`);
+		console.log(`${mark} ${msg.id.slice(0, 8)}  ${msg.from_addr.slice(0, 28).padEnd(28)}  ${msg.subject.slice(0, 48).padEnd(48)}  ${date}`);
 	}
 }
 
@@ -46,13 +89,7 @@ async function read(id: string | undefined) {
 	}
 	const config = requireConfig();
 	const api = new SmailsAPI(config.token);
-	const messages = await api.listMessages();
-	const match = messages.find((m) => m.id.startsWith(id));
-	if (!match) {
-		console.error(`No message found starting with "${id}".`);
-		process.exit(1);
-	}
-	const msg = await api.getMessage(match.id);
+	const msg = await api.getMessage(await resolveMessageId(api, id));
 	console.log(`From:    ${msg.from_name} <${msg.from_addr}>`);
 	console.log(`Subject: ${msg.subject}`);
 	console.log(`Date:    ${new Date(msg.received_at).toLocaleString()}`);
@@ -60,9 +97,20 @@ async function read(id: string | undefined) {
 	console.log(msg.text || msg.html || "(empty)");
 }
 
-async function whoami() {
+async function del(id: string | undefined) {
+	if (!id) {
+		console.error("Usage: smails delete <id>");
+		process.exit(1);
+	}
 	const config = requireConfig();
-	console.log(config.address);
+	const api = new SmailsAPI(config.token);
+	const fullId = await resolveMessageId(api, id);
+	await api.deleteMessage(fullId);
+	console.log(`Deleted ${fullId.slice(0, 8)}.`);
+}
+
+function whoami() {
+	console.log(requireConfig().address);
 }
 
 export async function runCLI(args: string[]) {
@@ -74,18 +122,16 @@ export async function runCLI(args: string[]) {
 			return inbox();
 		case "read":
 			return read(args[1]);
+		case "delete":
+		case "rm":
+			return del(args[1]);
 		case "whoami":
 			return whoami();
+		case "-h":
+		case "--help":
+			return void console.log(HELP);
 		default:
-			console.log(`Usage: smails <command>
-
-Commands:
-  create          Create a new mailbox
-  create --new    Replace current mailbox with a new one
-  inbox           List messages
-  read <id>       Read a message (prefix match)
-  whoami          Show current mailbox address
-  mcp             Start the MCP server (for AI agents)`);
+			console.log(HELP);
 			process.exit(command ? 1 : 0);
 	}
 }

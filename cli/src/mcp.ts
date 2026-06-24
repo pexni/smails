@@ -1,13 +1,14 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod";
+import pkg from "../package.json" with { type: "json" };
 import { SmailsAPI } from "./api.js";
 import { loadConfig, saveConfig } from "./config.js";
 
 export async function runMCP() {
 	const server = new McpServer({
 		name: "smails",
-		version: "0.0.2",
+		version: pkg.version,
 	});
 
 	function getAPI(): SmailsAPI {
