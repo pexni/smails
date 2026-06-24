@@ -1,47 +1,42 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from "react"
-import { Copy, RefreshCw, Plus, ArrowLeft, ArrowDown, Trash2 } from "lucide-react"
-import { toast } from "sonner"
-
-import type { Route } from "./+types/home"
-import { cn } from "~/lib/utils"
-import { formatTime, initials } from "~/lib/format"
-import {
-  type Email,
-  type EmailDetail as EmailDetailType,
-  getToken,
-  getAddress,
-  clearAuth,
-  createMailbox,
-  listMessages,
-  getMessage,
-  deleteMessage,
-} from "~/lib/api"
-import { useWebSocket, type WsStatus } from "~/hooks/use-websocket"
-import { CodeBlock } from "~/components/code-block"
-import { Button } from "~/components/ui/button"
-import { Badge } from "~/components/ui/badge"
-import { Card, CardHeader, CardContent, CardTitle } from "~/components/ui/card"
-import { ScrollArea } from "~/components/ui/scroll-area"
-import { Avatar, AvatarFallback } from "~/components/ui/avatar"
-import { Skeleton } from "~/components/ui/skeleton"
+import { ArrowDown, ArrowLeft, Copy, Plus, RefreshCw, Trash2 } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "sonner";
+import { CodeBlock } from "~/components/code-block";
 import {
   Accordion,
+  AccordionContent,
   AccordionItem,
   AccordionTrigger,
-  AccordionContent,
-} from "~/components/ui/accordion"
+} from "~/components/ui/accordion";
+import { Avatar, AvatarFallback } from "~/components/ui/avatar";
+import { Badge } from "~/components/ui/badge";
+import { Button } from "~/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/card";
+import { ScrollArea } from "~/components/ui/scroll-area";
+import { Skeleton } from "~/components/ui/skeleton";
+import { Tooltip, TooltipContent, TooltipTrigger } from "~/components/ui/tooltip";
+import { useWebSocket, type WsStatus } from "~/hooks/use-websocket";
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "~/components/ui/tooltip"
+  clearAuth,
+  createMailbox,
+  deleteMessage,
+  type Email,
+  type EmailDetail as EmailDetailType,
+  getAddress,
+  getMessage,
+  getToken,
+  listMessages,
+} from "~/lib/api";
+import { formatTime, initials } from "~/lib/format";
+import { cn } from "~/lib/utils";
+import type { Route } from "./+types/home";
 
 export function meta(_: Route.MetaArgs) {
-  const url = "https://smails.dev/"
-  const title = "smails — disposable email for humans & agents"
+  const url = "https://smails.dev/";
+  const title = "smails — disposable email for humans & agents";
   const description =
-    "An instant throwaway inbox for sign-ups, codes, and confirmations — with a REST API, CLI, and MCP server so your agents can read it too. No signup."
-  const image = "https://smails.dev/og.png"
+    "An instant throwaway inbox for sign-ups, codes, and confirmations — with a REST API, CLI, and MCP server so your agents can read it too. No signup.";
+  const image = "https://smails.dev/og.png";
   return [
     { title },
     { name: "description", content: description },
@@ -59,18 +54,18 @@ export function meta(_: Route.MetaArgs) {
     { name: "twitter:description", content: description },
     { name: "twitter:image", content: image },
     { name: "twitter:image:alt", content: "smails — disposable email for humans and agents" },
-  ]
+  ];
 }
 
-const GITHUB_URL = "https://github.com/pexni/smails"
-const NPM_URL = "https://www.npmjs.com/package/@smails/cli"
+const GITHUB_URL = "https://github.com/pexni/smails";
+const NPM_URL = "https://www.npmjs.com/package/@smails/cli";
 
 const CLI_CODE = `# create a mailbox
 npx @smails/cli create
 
 # list and read messages
 npx @smails/cli inbox
-npx @smails/cli read <id>`
+npx @smails/cli read <id>`;
 
 const MCP_CODE = `{
   "mcpServers": {
@@ -79,7 +74,7 @@ const MCP_CODE = `{
       "args": ["@smails/cli", "mcp"]
     }
   }
-}`
+}`;
 
 const MCP_TOOLS = [
   "create_mailbox",
@@ -87,7 +82,7 @@ const MCP_TOOLS = [
   "read_message",
   "delete_message",
   "get_address",
-]
+];
 
 const API_CODE = `# create a mailbox
 curl -X POST https://smails.dev/api/mailbox
@@ -99,7 +94,7 @@ curl https://smails.dev/api/mailbox/messages \\
 
 # read one message (full parsed body)
 curl https://smails.dev/api/mailbox/messages/<id> \\
-  -H "Authorization: Bearer <token>"`
+  -H "Authorization: Bearer <token>"`;
 
 const ENDPOINTS: { method: string; path: string; desc: string }[] = [
   { method: "POST", path: "/api/mailbox", desc: "Create a mailbox → { address, token }" },
@@ -107,7 +102,7 @@ const ENDPOINTS: { method: string; path: string; desc: string }[] = [
   { method: "GET", path: "/api/mailbox/messages/:id", desc: "Read a message (full body)" },
   { method: "DELETE", path: "/api/mailbox/messages/:id", desc: "Delete a message" },
   { method: "WS", path: "/api/mailbox/connect", desc: "Stream new-mail notifications" },
-]
+];
 
 const FAQ = [
   {
@@ -130,133 +125,136 @@ const FAQ = [
     q: "Is anyone reading my mail?",
     a: "We don't ask who you are and we don't track you.",
   },
-]
+];
 
 function buildWsUrl(token: string | null): string | null {
-  if (!token || typeof window === "undefined") return null
-  const protocol = location.protocol === "https:" ? "wss:" : "ws:"
-  return `${protocol}//${location.host}/api/mailbox/connect?token=${token}`
+  if (!token || typeof window === "undefined") return null;
+  const protocol = location.protocol === "https:" ? "wss:" : "ws:";
+  return `${protocol}//${location.host}/api/mailbox/connect?token=${token}`;
 }
 
 export default function Home() {
-  const [address, setAddress] = useState<string>("")
-  const [emails, setEmails] = useState<Email[]>([])
-  const [selectedId, setSelectedId] = useState<string | null>(null)
-  const [detail, setDetail] = useState<EmailDetailType | null>(null)
-  const [token, setToken] = useState<string | null>(null)
-  const [loaded, setLoaded] = useState(false)
-  const selectedIdRef = useRef<string | null>(null)
-  selectedIdRef.current = selectedId
+  const [address, setAddress] = useState<string>("");
+  const [emails, setEmails] = useState<Email[]>([]);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<EmailDetailType | null>(null);
+  const [token, setToken] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
+  const selectedIdRef = useRef<string | null>(null);
+  selectedIdRef.current = selectedId;
 
   const fetchMessages = useCallback(async () => {
-    const msgs = await listMessages()
-    setEmails(msgs)
-  }, [])
+    const msgs = await listMessages();
+    setEmails(msgs);
+  }, []);
 
-  const wsUrl = useMemo(() => buildWsUrl(token), [token])
+  const wsUrl = useMemo(() => buildWsUrl(token), [token]);
 
   const { status: wsStatus } = useWebSocket({
     url: wsUrl,
     onMessage: (data) => {
-      if (data && typeof data === "object" && "type" in data && (data as { type: string }).type === "new_email") {
-        fetchMessages()
+      if (
+        data &&
+        typeof data === "object" &&
+        "type" in data &&
+        (data as { type: string }).type === "new_email"
+      ) {
+        fetchMessages();
       }
     },
-  })
+  });
 
   useEffect(() => {
     async function init() {
       try {
-        const existingToken = getToken()
-        const addr = getAddress()
-        let needsNewMailbox = !existingToken || !addr
+        const existingToken = getToken();
+        const addr = getAddress();
+        let needsNewMailbox = !existingToken || !addr;
         if (existingToken && addr) {
           try {
-            setAddress(addr)
-            setToken(existingToken)
-            await fetchMessages()
+            setAddress(addr);
+            setToken(existingToken);
+            await fetchMessages();
           } catch {
-            clearAuth()
-            needsNewMailbox = true
+            clearAuth();
+            needsNewMailbox = true;
           }
         }
         if (needsNewMailbox) {
-          const result = await createMailbox()
-          setAddress(result.address)
-          setToken(result.token)
+          const result = await createMailbox();
+          setAddress(result.address);
+          setToken(result.token);
         }
       } catch {
-        toast.error("Failed to initialize. Please refresh the page.")
+        toast.error("Failed to initialize. Please refresh the page.");
       } finally {
-        setLoaded(true)
+        setLoaded(true);
       }
     }
-    init()
-  }, [fetchMessages])
+    init();
+  }, [fetchMessages]);
 
-  const selected = emails.find((e) => e.id === selectedId) ?? null
-  const unreadCount = emails.filter((e) => !e.read).length
+  const selected = emails.find((e) => e.id === selectedId) ?? null;
+  const unreadCount = emails.filter((e) => !e.read).length;
 
   function copyAddress() {
     navigator.clipboard.writeText(address).then(
       () => toast.success("Copied"),
       () => toast.error("Couldn't copy"),
-    )
+    );
   }
 
   async function handleNewAddress() {
     try {
-      const result = await createMailbox()
-      setAddress(result.address)
-      setToken(result.token)
-      setEmails([])
-      setSelectedId(null)
-      setDetail(null)
-      toast.success("New mailbox created")
+      const result = await createMailbox();
+      setAddress(result.address);
+      setToken(result.token);
+      setEmails([]);
+      setSelectedId(null);
+      setDetail(null);
+      toast.success("New mailbox created");
     } catch {
-      toast.error("Failed to create mailbox")
+      toast.error("Failed to create mailbox");
     }
   }
 
   async function handleRefresh() {
     try {
-      await fetchMessages()
-      toast.success("Refreshed")
+      await fetchMessages();
+      toast.success("Refreshed");
     } catch {
-      toast.error("Failed to refresh")
+      toast.error("Failed to refresh");
     }
   }
 
   async function openEmail(email: Email) {
-    const targetId = email.id
-    setSelectedId(targetId)
-    setDetail(null)
+    const targetId = email.id;
+    setSelectedId(targetId);
+    setDetail(null);
     if (!email.read) {
-      setEmails((prev) =>
-        prev.map((e) => (e.id === targetId ? { ...e, read: 1 } : e)),
-      )
+      setEmails((prev) => prev.map((e) => (e.id === targetId ? { ...e, read: 1 } : e)));
     }
     try {
-      const msg = await getMessage(targetId)
+      const msg = await getMessage(targetId);
       if (selectedIdRef.current === targetId) {
-        setDetail(msg)
+        setDetail(msg);
       }
     } catch {
-      toast.error("Failed to load message")
+      toast.error("Failed to load message");
     }
   }
 
   async function handleDelete(id: string) {
     try {
-      await deleteMessage(id)
-      setEmails((prev) => prev.filter((e) => e.id !== id))
+      await deleteMessage(id);
+      setEmails((prev) => prev.filter((e) => e.id !== id));
       if (selectedIdRef.current === id) {
-        setSelectedId(null)
-        setDetail(null)
+        setSelectedId(null);
+        setDetail(null);
       }
-      toast.success("Deleted")
+      toast.success("Deleted");
     } catch {
-      toast.error("Failed to delete")
+      toast.error("Failed to delete");
     }
   }
 
@@ -272,8 +270,8 @@ export default function Home() {
             Disposable email for humans and agents.
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base text-muted-foreground text-balance sm:text-lg">
-            An instant throwaway inbox for sign-ups, codes, and confirmations —
-            with a REST API, CLI, and MCP server so your agents can read it too.
+            An instant throwaway inbox for sign-ups, codes, and confirmations — with a REST API,
+            CLI, and MCP server so your agents can read it too.
           </p>
           <div className="mt-8 flex justify-center">
             <Button render={<a href="#inbox" />}>
@@ -298,8 +296,8 @@ export default function Home() {
             onCopy={copyAddress}
             onOpen={openEmail}
             onBack={() => {
-              setSelectedId(null)
-              setDetail(null)
+              setSelectedId(null);
+              setDetail(null);
             }}
             onDelete={handleDelete}
           />
@@ -312,7 +310,7 @@ export default function Home() {
 
       <Footer />
     </div>
-  )
+  );
 }
 
 function Nav() {
@@ -344,7 +342,7 @@ function Nav() {
         </nav>
       </div>
     </header>
-  )
+  );
 }
 
 function Mailbox({
@@ -363,32 +361,32 @@ function Mailbox({
   onBack,
   onDelete,
 }: {
-  address: string
-  emails: Email[]
-  loading: boolean
-  selected: Email | null
-  detail: EmailDetailType | null
-  selectedId: string | null
-  unreadCount: number
-  wsStatus: WsStatus
-  onNew: () => void
-  onRefresh: () => void
-  onCopy: () => void
-  onOpen: (e: Email) => void
-  onBack: () => void
-  onDelete: (id: string) => void
+  address: string;
+  emails: Email[];
+  loading: boolean;
+  selected: Email | null;
+  detail: EmailDetailType | null;
+  selectedId: string | null;
+  unreadCount: number;
+  wsStatus: WsStatus;
+  onNew: () => void;
+  onRefresh: () => void;
+  onCopy: () => void;
+  onOpen: (e: Email) => void;
+  onBack: () => void;
+  onDelete: (id: string) => void;
 }) {
   return (
     <Card className="gap-0 p-0">
       <div className="flex flex-wrap items-center gap-3 border-b border-border px-4 py-3">
         <div className="min-w-0 flex-1">
-          <h2 id="inbox-heading" className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+          <h2
+            id="inbox-heading"
+            className="text-xs font-semibold uppercase tracking-widest text-muted-foreground"
+          >
             Your live inbox
           </h2>
-          <code
-            aria-label={address ? `Your inbox address: ${address}` : "Your inbox address"}
-            className="mt-1 block min-w-0 truncate font-mono text-lg font-semibold sm:text-2xl"
-          >
+          <code className="mt-1 block min-w-0 truncate font-mono text-lg font-semibold sm:text-2xl">
             {address || " "}
           </code>
         </div>
@@ -409,9 +407,7 @@ function Mailbox({
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
         <span className="text-xs text-muted-foreground">
           {emails.length} message{emails.length === 1 ? "" : "s"}
-          {unreadCount > 0 && (
-            <span className="text-foreground"> · {unreadCount} unread</span>
-          )}
+          {unreadCount > 0 && <span className="text-foreground"> · {unreadCount} unread</span>}
         </span>
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span
@@ -437,6 +433,7 @@ function Mailbox({
             {loading ? (
               <ul className="divide-y divide-border">
                 {Array.from({ length: 5 }).map((_, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: static placeholder list, never reordered
                   <SkeletonRow key={i} />
                 ))}
               </ul>
@@ -471,7 +468,7 @@ function Mailbox({
         </section>
       </div>
     </Card>
-  )
+  );
 }
 
 function ForAgents() {
@@ -482,8 +479,8 @@ function ForAgents() {
         Give your agent its own inbox.
       </h2>
       <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-        Humans and agents share the same mailbox. Drive it from the terminal, or
-        plug the MCP server into Claude, Cursor, or any MCP client.
+        Humans and agents share the same mailbox. Drive it from the terminal, or plug the MCP server
+        into Claude, Cursor, or any MCP client.
       </p>
 
       <div className="mt-10 grid gap-5 text-left md:grid-cols-2 md:items-stretch">
@@ -498,10 +495,7 @@ function ForAgents() {
         <CardContent>
           <div className="flex flex-wrap justify-center gap-2">
             {MCP_TOOLS.map((t) => (
-              <code
-                key={t}
-                className="border border-border bg-muted px-2 py-1 font-mono text-xs"
-              >
+              <code key={t} className="border border-border bg-muted px-2 py-1 font-mono text-xs">
                 {t}
               </code>
             ))}
@@ -509,7 +503,7 @@ function ForAgents() {
         </CardContent>
       </Card>
     </section>
-  )
+  );
 }
 
 function ApiSection() {
@@ -520,8 +514,7 @@ function ApiSection() {
         Or just call the API.
       </h2>
       <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-        No SDK required. Create a mailbox, then poll or stream messages with the
-        returned token.
+        No SDK required. Create a mailbox, then poll or stream messages with the returned token.
       </p>
 
       <div className="mt-10 grid items-stretch gap-5 text-left md:grid-cols-2">
@@ -535,10 +528,7 @@ function ApiSection() {
           {ENDPOINTS.map((e, i) => (
             <div
               key={e.path}
-              className={cn(
-                "flex items-center gap-3 px-4 py-3",
-                i > 0 && "border-t border-border",
-              )}
+              className={cn("flex items-center gap-3 px-4 py-3", i > 0 && "border-t border-border")}
             >
               <span className="inline-flex w-14 shrink-0 items-center justify-center bg-muted py-1 font-mono text-xs font-medium text-foreground">
                 {e.method}
@@ -552,7 +542,7 @@ function ApiSection() {
         </Card>
       </div>
     </section>
-  )
+  );
 }
 
 function Faq() {
@@ -567,15 +557,13 @@ function Faq() {
           {FAQ.map((item) => (
             <AccordionItem key={item.q} value={item.q} className="px-5">
               <AccordionTrigger>{item.q}</AccordionTrigger>
-              <AccordionContent className="text-muted-foreground">
-                {item.a}
-              </AccordionContent>
+              <AccordionContent className="text-muted-foreground">{item.a}</AccordionContent>
             </AccordionItem>
           ))}
         </Accordion>
       </Card>
     </section>
-  )
+  );
 }
 
 function Footer() {
@@ -585,20 +573,28 @@ function Footer() {
         <p className="font-mono text-sm font-semibold">
           smails<span className="text-muted-foreground">.dev</span>
         </p>
-        <p className="text-sm text-muted-foreground">
-          Disposable email for humans and agents.
-        </p>
+        <p className="text-sm text-muted-foreground">Disposable email for humans and agents.</p>
         <div className="flex items-center gap-5 text-sm text-muted-foreground">
-          <a href={NPM_URL} target="_blank" rel="noreferrer" className="transition-colors hover:text-foreground">
+          <a
+            href={NPM_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="transition-colors hover:text-foreground"
+          >
             npm
           </a>
-          <a href={GITHUB_URL} target="_blank" rel="noreferrer" className="transition-colors hover:text-foreground">
+          <a
+            href={GITHUB_URL}
+            target="_blank"
+            rel="noreferrer"
+            className="transition-colors hover:text-foreground"
+          >
             GitHub
           </a>
         </div>
       </div>
     </footer>
-  )
+  );
 }
 
 function EmailListItem({
@@ -606,11 +602,11 @@ function EmailListItem({
   active,
   onClick,
 }: {
-  email: Email
-  active: boolean
-  onClick: () => void
+  email: Email;
+  active: boolean;
+  onClick: () => void;
 }) {
-  const isRead = !!email.read
+  const isRead = !!email.read;
   return (
     <li>
       <button
@@ -627,10 +623,7 @@ function EmailListItem({
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <span
-              className={cn(
-                "truncate text-sm",
-                isRead ? "text-muted-foreground" : "font-semibold",
-              )}
+              className={cn("truncate text-sm", isRead ? "text-muted-foreground" : "font-semibold")}
             >
               {!isRead && <span className="sr-only">Unread. </span>}
               {email.from_name}
@@ -639,19 +632,18 @@ function EmailListItem({
               {formatTime(email.received_at)}
             </span>
           </div>
-          <p className={cn("truncate text-sm", !isRead && "font-medium")}>
-            {email.subject}
-          </p>
-          <p className="truncate text-xs text-muted-foreground">
-            {email.preview}
-          </p>
+          <p className={cn("truncate text-sm", !isRead && "font-medium")}>{email.subject}</p>
+          <p className="truncate text-xs text-muted-foreground">{email.preview}</p>
         </div>
         {!isRead && (
-          <span aria-hidden="true" className="mt-1.5 size-1.5 shrink-0 rounded-full bg-foreground" />
+          <span
+            aria-hidden="true"
+            className="mt-1.5 size-1.5 shrink-0 rounded-full bg-foreground"
+          />
         )}
       </button>
     </li>
-  )
+  );
 }
 
 function EmailDetail({
@@ -660,10 +652,10 @@ function EmailDetail({
   onBack,
   onDelete,
 }: {
-  email: Email
-  detail: EmailDetailType | null
-  onBack: () => void
-  onDelete: () => void
+  email: Email;
+  detail: EmailDetailType | null;
+  onBack: () => void;
+  onDelete: () => void;
 }) {
   return (
     <div className="flex h-full flex-col">
@@ -677,9 +669,7 @@ function EmailDetail({
         >
           <ArrowLeft />
         </Button>
-        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">
-          {email.subject}
-        </h2>
+        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{email.subject}</h2>
         <IconAction label="Delete" onClick={onDelete}>
           <Trash2 />
         </IconAction>
@@ -715,7 +705,7 @@ function EmailDetail({
         )}
       </div>
     </div>
-  )
+  );
 }
 
 function SkeletonRow() {
@@ -728,28 +718,24 @@ function SkeletonRow() {
         <Skeleton className="h-2.5 w-32 max-w-full" />
       </div>
     </li>
-  )
+  );
 }
 
 function EmptyInbox() {
   return (
     <div className="flex flex-col items-center justify-center gap-1 px-4 py-16 text-center">
       <p className="text-sm font-medium">Nothing here yet</p>
-      <p className="text-xs text-muted-foreground">
-        New mail lands here on its own.
-      </p>
+      <p className="text-xs text-muted-foreground">New mail lands here on its own.</p>
     </div>
-  )
+  );
 }
 
 function EmptyDetail() {
   return (
     <div className="flex h-full items-center justify-center px-6 text-center">
-      <p className="text-sm text-muted-foreground">
-        Select a message to read it.
-      </p>
+      <p className="text-sm text-muted-foreground">Select a message to read it.</p>
     </div>
-  )
+  );
 }
 
 function IconAction({
@@ -757,27 +743,20 @@ function IconAction({
   onClick,
   children,
 }: {
-  label: string
-  onClick: () => void
-  children: React.ReactNode
+  label: string;
+  onClick: () => void;
+  children: React.ReactNode;
 }) {
   return (
     <Tooltip>
       <TooltipTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onClick}
-            aria-label={label}
-          />
-        }
+        render={<Button variant="ghost" size="icon-sm" onClick={onClick} aria-label={label} />}
       >
         {children}
       </TooltipTrigger>
       <TooltipContent>{label}</TooltipContent>
     </Tooltip>
-  )
+  );
 }
 
 function GithubIcon({ className }: { className?: string }) {
@@ -785,7 +764,7 @@ function GithubIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
       <path d="M12 .5C5.37.5 0 5.78 0 12.292c0 5.211 3.438 9.63 8.205 11.188.6.111.82-.254.82-.567 0-.28-.01-1.022-.015-2.005-3.338.711-4.042-1.582-4.042-1.582-.546-1.361-1.335-1.725-1.335-1.725-1.087-.731.084-.716.084-.716 1.205.082 1.838 1.215 1.838 1.215 1.07 1.803 2.809 1.282 3.495.981.108-.763.417-1.282.76-1.577-2.665-.295-5.466-1.309-5.466-5.827 0-1.287.465-2.339 1.235-3.164-.135-.298-.54-1.497.105-3.121 0 0 1.005-.316 3.3 1.209.96-.262 1.98-.392 3-.398 1.02.006 2.04.136 3 .398 2.28-1.525 3.285-1.209 3.285-1.209.645 1.624.24 2.823.12 3.121.765.825 1.23 1.877 1.23 3.164 0 4.53-2.805 5.527-5.475 5.817.42.354.81 1.077.81 2.182 0 1.578-.015 2.846-.015 3.229 0 .309.21.678.825.561C20.565 21.917 24 17.495 24 12.292 24 5.78 18.63.5 12 .5z" />
     </svg>
-  )
+  );
 }
 
 function StructuredData() {
@@ -810,11 +789,9 @@ function StructuredData() {
         })),
       },
     ],
-  }
+  };
   return (
-    <script
-      type="application/ld+json"
-      dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }}
-    />
-  )
+    // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted JSON-LD built from static data
+    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
+  );
 }

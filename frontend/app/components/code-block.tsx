@@ -1,32 +1,30 @@
-import { useState } from "react"
-import { Check, Copy } from "lucide-react"
-import { cn } from "~/lib/utils"
-import { Card } from "~/components/ui/card"
+import { Check, Copy } from "lucide-react";
+import { useState } from "react";
+import { Card } from "~/components/ui/card";
+import { cn } from "~/lib/utils";
 
 export function CodeBlock({
   code,
   label,
   className,
 }: {
-  code: string
-  label?: string
-  className?: string
+  code: string;
+  label?: string;
+  className?: string;
 }) {
-  const [copied, setCopied] = useState(false)
+  const [copied, setCopied] = useState(false);
 
   function copy() {
     navigator.clipboard.writeText(code).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1500)
-    })
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    });
   }
 
   return (
     <Card className={cn("gap-0 p-0", className)}>
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
-        <span className="font-mono text-xs text-muted-foreground">
-          {label ?? "shell"}
-        </span>
+        <span className="font-mono text-xs text-muted-foreground">{label ?? "shell"}</span>
         <button
           type="button"
           onClick={copy}
@@ -37,10 +35,8 @@ export function CodeBlock({
         </button>
       </div>
       <pre className="flex-1 overflow-x-auto bg-muted px-4 py-3.5">
-        <code className="font-mono text-sm leading-relaxed text-foreground">
-          {code}
-        </code>
+        <code className="font-mono text-sm leading-relaxed text-foreground">{code}</code>
       </pre>
     </Card>
-  )
+  );
 }

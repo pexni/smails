@@ -1,12 +1,12 @@
-import { useEffect, useRef, useState, useCallback } from "react"
+import { useCallback, useEffect, useRef, useState } from "react";
 
-export type WsStatus = "connecting" | "connected" | "disconnected"
+export type WsStatus = "connecting" | "connected" | "disconnected";
 
 interface UseWebSocketOptions {
-  url: string | null
-  onMessage?: (data: unknown) => void
-  maxRetries?: number
-  pingIntervalMs?: number
+  url: string | null;
+  onMessage?: (data: unknown) => void;
+  maxRetries?: number;
+  pingIntervalMs?: number;
 }
 
 export function useWebSocket({
@@ -15,94 +15,101 @@ export function useWebSocket({
   maxRetries = Infinity,
   pingIntervalMs = 30000,
 }: UseWebSocketOptions) {
-  const [status, setStatus] = useState<WsStatus>("disconnected")
-  const wsRef = useRef<WebSocket | null>(null)
-  const retriesRef = useRef(0)
-  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined)
-  const pingTimerRef = useRef<ReturnType<typeof setInterval>>(undefined)
-  const urlRef = useRef(url)
-  const onMessageRef = useRef(onMessage)
-  const disposedRef = useRef(false)
+  const [status, setStatus] = useState<WsStatus>("disconnected");
+  const wsRef = useRef<WebSocket | null>(null);
+  const retriesRef = useRef(0);
+  const timerRef = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const pingTimerRef = useRef<ReturnType<typeof setInterval>>(undefined);
+  const urlRef = useRef(url);
+  const onMessageRef = useRef(onMessage);
+  const disposedRef = useRef(false);
 
-  urlRef.current = url
-  onMessageRef.current = onMessage
+  urlRef.current = url;
+  onMessageRef.current = onMessage;
 
   const stopPing = useCallback(() => {
-    clearInterval(pingTimerRef.current)
-  }, [])
+    clearInterval(pingTimerRef.current);
+  }, []);
 
-  const startPing = useCallback((ws: WebSocket) => {
-    stopPing()
-    pingTimerRef.current = setInterval(() => {
-      if (ws.readyState === WebSocket.OPEN) {
-        ws.send("ping")
-      }
-    }, pingIntervalMs)
-  }, [pingIntervalMs, stopPing])
+  const startPing = useCallback(
+    (ws: WebSocket) => {
+      stopPing();
+      pingTimerRef.current = setInterval(() => {
+        if (ws.readyState === WebSocket.OPEN) {
+          ws.send("ping");
+        }
+      }, pingIntervalMs);
+    },
+    [pingIntervalMs, stopPing],
+  );
 
   const connect = useCallback(() => {
-    const currentUrl = urlRef.current
-    if (!currentUrl || disposedRef.current) return
+    const currentUrl = urlRef.current;
+    if (!currentUrl || disposedRef.current) return;
 
-    wsRef.current?.close()
-    setStatus("connecting")
+    wsRef.current?.close();
+    setStatus("connecting");
 
-    const ws = new WebSocket(currentUrl)
+    const ws = new WebSocket(currentUrl);
 
     ws.onopen = () => {
-      if (disposedRef.current) { ws.close(); return }
-      retriesRef.current = 0
-      setStatus("connected")
-      startPing(ws)
-    }
+      if (disposedRef.current) {
+        ws.close();
+        return;
+      }
+      retriesRef.current = 0;
+      setStatus("connected");
+      startPing(ws);
+    };
 
     ws.onmessage = (event) => {
-      if (event.data === "pong") return
+      if (event.data === "pong") return;
       try {
-        const data = JSON.parse(event.data)
-        onMessageRef.current?.(data)
+        const data = JSON.parse(event.data);
+        onMessageRef.current?.(data);
       } catch {}
-    }
+    };
 
     ws.onclose = () => {
-      stopPing()
-      if (disposedRef.current) return
-      setStatus("disconnected")
+      stopPing();
+      if (disposedRef.current) return;
+      setStatus("disconnected");
       if (retriesRef.current < maxRetries) {
-        const delay = Math.min(1000 * 2 ** retriesRef.current, 30000)
-        retriesRef.current++
-        timerRef.current = setTimeout(connect, delay)
+        const delay = Math.min(1000 * 2 ** retriesRef.current, 30000);
+        retriesRef.current++;
+        timerRef.current = setTimeout(connect, delay);
       }
-    }
+    };
 
     ws.onerror = () => {
-      ws.close()
-    }
+      ws.close();
+    };
 
-    wsRef.current = ws
-  }, [maxRetries, startPing, stopPing])
+    wsRef.current = ws;
+  }, [maxRetries, startPing, stopPing]);
 
   const disconnect = useCallback(() => {
-    clearTimeout(timerRef.current)
-    stopPing()
-    disposedRef.current = true
-    wsRef.current?.close()
-    wsRef.current = null
-    setStatus("disconnected")
-  }, [stopPing])
+    clearTimeout(timerRef.current);
+    stopPing();
+    disposedRef.current = true;
+    wsRef.current?.close();
+    wsRef.current = null;
+    setStatus("disconnected");
+  }, [stopPing]);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: `url` must stay so the effect re-runs and reconnects when the URL changes
   useEffect(() => {
-    disposedRef.current = false
-    retriesRef.current = 0
-    connect()
+    disposedRef.current = false;
+    retriesRef.current = 0;
+    connect();
     return () => {
-      disposedRef.current = true
-      clearTimeout(timerRef.current)
-      stopPing()
-      wsRef.current?.close()
-      wsRef.current = null
-    }
-  }, [url, connect, stopPing])
+      disposedRef.current = true;
+      clearTimeout(timerRef.current);
+      stopPing();
+      wsRef.current?.close();
+      wsRef.current = null;
+    };
+  }, [url, connect, stopPing]);
 
-  return { status, reconnect: connect, disconnect }
+  return { status, reconnect: connect, disconnect };
 }

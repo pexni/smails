@@ -1,14 +1,14 @@
 {
-	"compilerOptions": {
-		"target": "es2022",
-		"module": "es2022",
-		"moduleResolution": "node",
-		"outDir": "dist",
-		"strict": true,
-		"esModuleInterop": true,
-		"resolveJsonModule": true,
-		"skipLibCheck": true,
-		"forceConsistentCasingInFileNames": true
-	},
-	"include": ["src", "package.json"]
+  "compilerOptions": {
+    "target": "es2022",
+    "module": "es2022",
+    "moduleResolution": "node",
+    "outDir": "dist",
+    "strict": true,
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src", "package.json"]
 }

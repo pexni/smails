@@ -1,21 +1,21 @@
 {
-	"name": "worker",
-	"version": "0.0.0",
-	"private": true,
-	"scripts": {
-		"deploy": "wrangler deploy",
-		"dev": "wrangler dev",
-		"start": "wrangler dev",
-		"cf-typegen": "wrangler types"
-	},
-	"devDependencies": {
-		"@types/node": "^26.0.0",
-		"typescript": "^5.5.2",
-		"wrangler": "^4.104.0"
-	},
-	"dependencies": {
-		"@scaleway/random-name": "^6.0.2",
-		"hono": "^4.12.27",
-		"postal-mime": "^2.7.4"
-	}
+  "name": "worker",
+  "version": "0.0.0",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "start": "wrangler dev",
+    "cf-typegen": "wrangler types"
+  },
+  "devDependencies": {
+    "@types/node": "^26.0.0",
+    "typescript": "^5.5.2",
+    "wrangler": "^4.104.0"
+  },
+  "dependencies": {
+    "@scaleway/random-name": "^6.0.2",
+    "hono": "^4.12.27",
+    "postal-mime": "^2.7.4"
+  }
 }
