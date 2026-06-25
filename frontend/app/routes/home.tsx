@@ -1,7 +1,9 @@
 import { ArrowDown, ArrowLeft, Copy, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link } from "react-router";
 import { toast } from "sonner";
 import { CodeBlock } from "~/components/code-block";
+import { GITHUB_URL, SiteFooter } from "~/components/site-chrome";
 import {
   Accordion,
   AccordionContent,
@@ -33,13 +35,14 @@ import type { Route } from "./+types/home";
 
 export function meta(_: Route.MetaArgs) {
   const url = "https://smails.dev/";
-  const title = "smails — disposable email for humans & agents";
+  const title = "smails — free disposable email with REST API, CLI & MCP";
   const description =
     "An instant throwaway inbox for sign-ups, codes, and confirmations — with a REST API, CLI, and MCP server so your agents can read it too. No signup.";
   const image = "https://smails.dev/og.png";
   return [
     { title },
     { name: "description", content: description },
+    { tagName: "link", rel: "canonical", href: url },
     { property: "og:type", content: "website" },
     { property: "og:url", content: url },
     { property: "og:site_name", content: "smails" },
@@ -56,9 +59,6 @@ export function meta(_: Route.MetaArgs) {
     { name: "twitter:image:alt", content: "smails — disposable email for humans and agents" },
   ];
 }
-
-const GITHUB_URL = "https://github.com/pexni/smails";
-const NPM_URL = "https://www.npmjs.com/package/@smails/cli";
 
 const CLI_CODE = `# create a mailbox
 npx @smails/cli create
@@ -308,7 +308,7 @@ export default function Home() {
         <Faq />
       </main>
 
-      <Footer />
+      <SiteFooter />
     </div>
   );
 }
@@ -502,6 +502,17 @@ function ForAgents() {
           </div>
         </CardContent>
       </Card>
+
+      <p className="mt-6 text-sm text-muted-foreground">
+        <Link to="/mcp" className="font-medium text-foreground underline underline-offset-4">
+          Read the MCP server guide
+        </Link>{" "}
+        — setup for Claude and Cursor — or see how to{" "}
+        <Link to="/otp" className="font-medium text-foreground underline underline-offset-4">
+          read verification codes
+        </Link>{" "}
+        from a script or agent.
+      </p>
     </section>
   );
 }
@@ -514,7 +525,11 @@ function ApiSection() {
         Or just call the API.
       </h2>
       <p className="mx-auto mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-        No SDK required. Create a mailbox, then poll or stream messages with the returned token.
+        No SDK required. Create a mailbox, then poll or stream messages with the returned token.{" "}
+        <Link to="/email-api" className="font-medium text-foreground underline underline-offset-4">
+          See the full REST API reference
+        </Link>
+        .
       </p>
 
       <div className="mt-10 grid items-stretch gap-5 text-left md:grid-cols-2">
@@ -527,7 +542,7 @@ function ApiSection() {
           </div>
           {ENDPOINTS.map((e, i) => (
             <div
-              key={e.path}
+              key={`${e.method} ${e.path}`}
               className={cn("flex items-center gap-3 px-4 py-3", i > 0 && "border-t border-border")}
             >
               <span className="inline-flex w-14 shrink-0 items-center justify-center bg-muted py-1 font-mono text-xs font-medium text-foreground">
@@ -563,37 +578,6 @@ function Faq() {
         </Accordion>
       </Card>
     </section>
-  );
-}
-
-function Footer() {
-  return (
-    <footer className="border-t border-border">
-      <div className="mx-auto flex max-w-5xl flex-col items-center gap-2 px-5 py-12 text-center">
-        <p className="font-mono text-sm font-semibold">
-          smails<span className="text-muted-foreground">.dev</span>
-        </p>
-        <p className="text-sm text-muted-foreground">Disposable email for humans and agents.</p>
-        <div className="flex items-center gap-5 text-sm text-muted-foreground">
-          <a
-            href={NPM_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="transition-colors hover:text-foreground"
-          >
-            npm
-          </a>
-          <a
-            href={GITHUB_URL}
-            target="_blank"
-            rel="noreferrer"
-            className="transition-colors hover:text-foreground"
-          >
-            GitHub
-          </a>
-        </div>
-      </div>
-    </footer>
   );
 }
 
