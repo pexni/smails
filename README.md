@@ -115,12 +115,22 @@ SMAILS_API_URL=http://localhost:8787 node dist/index.js create
 
 ## Deployment
 
-The frontend builds to static assets that the Worker serves, so it's a single deploy:
+There are two independent release tracks — pushing to `main` ships the service, but **not** the CLI.
+
+**Worker + frontend** — auto-deployed by [Cloudflare Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/) on every push to `main` (the frontend builds to static assets the Worker serves). No manual step. To deploy by hand instead:
 
 ```bash
-cd frontend && pnpm build      # → build/client
+cd frontend && pnpm build         # → build/client
 cd ../worker && pnpm run deploy   # wrangler deploy — serves assets + API + DOs
 ```
+
+**CLI (`@smails/cli`) + MCP server** — *not* auto-deployed; publishing is a separate, manual release:
+
+1. Bump the version in `cli/package.json` (npm rejects re-publishing an existing version).
+2. Push to `main`.
+3. `gh release create cli-vX.Y.Z --target main` — creating the GitHub Release triggers `.github/workflows/publish-cli.yml`, which publishes to npm and syncs the [MCP registry](https://registry.modelcontextprotocol.io) listing from `server.json`.
+
+> `server.json`'s `description` must be ≤ 100 characters or the MCP registry publish step 422s.
 
 Receiving mail uses Cloudflare Email Routing (catch-all → the Worker's `email` handler). Configure receiving domains via the `DOMAINS` var and the route in `worker/wrangler.jsonc`.
 
