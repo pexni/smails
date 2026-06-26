@@ -2,6 +2,7 @@ import { DurableObject } from "cloudflare:workers";
 import PostalMime from "postal-mime";
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+const ONE_DAY_MS = 24 * 60 * 60 * 1000;
 
 type Row = Record<string, SqlStorageValue>;
 
@@ -12,6 +13,22 @@ export class AppError extends Error {
   ) {
     super(message);
   }
+}
+
+// An AppError thrown inside the Durable Object is flattened to a plain Error when
+// it crosses the RPC boundary: the subclass identity and the `status` own-property
+// are both dropped — only `message` survives. Map the known messages back to a
+// status so the Worker returns the real code instead of a blanket 500.
+const STATUS_BY_MESSAGE: Record<string, number> = {
+  Unauthorized: 401,
+  "Mailbox already exists": 409,
+  "Message not found": 404,
+};
+
+export function httpStatusForError(err: unknown): number | null {
+  if (err instanceof AppError) return err.status;
+  if (err instanceof Error) return STATUS_BY_MESSAGE[err.message] ?? null;
+  return null;
 }
 
 export class Mailbox extends DurableObject<Env> {
@@ -58,12 +75,11 @@ export class Mailbox extends DurableObject<Env> {
     await this.ctx.storage.setAlarm(Date.now() + SEVEN_DAYS_MS);
   }
 
-  async init(token: string, domain: string): Promise<{ address: string; token: string }> {
+  async create(token: string, domain: string): Promise<{ address: string; token: string }> {
     if (this.token) {
       throw new AppError(409, "Mailbox already exists");
     }
     await this.ctx.storage.put("token", token);
-    await this.ctx.storage.put("domain", domain);
     this.token = token;
     await this.touchActivity();
     return { address: `${this.address}@${domain}`, token };
@@ -91,7 +107,17 @@ export class Mailbox extends DurableObject<Env> {
     }
     const row = rows[0];
     const rawBytes = Uint8Array.from(atob(row.raw as string), (c) => c.charCodeAt(0));
-    const parsed = await PostalMime.parse(rawBytes);
+    let html: string | null = null;
+    let text: string | null = null;
+    let attachments: unknown[] = [];
+    try {
+      const parsed = await PostalMime.parse(rawBytes);
+      html = parsed.html || null;
+      text = parsed.text || null;
+      attachments = parsed.attachments;
+    } catch {
+      // unparseable stored message — return metadata with an empty body
+    }
     return {
       id: row.id,
       from_addr: row.from_addr,
@@ -99,9 +125,9 @@ export class Mailbox extends DurableObject<Env> {
       subject: row.subject,
       received_at: row.received_at,
       read: row.read,
-      html: parsed.html || null,
-      text: parsed.text || null,
-      attachments: parsed.attachments,
+      html,
+      text,
+      attachments,
     };
   }
 
@@ -111,13 +137,17 @@ export class Mailbox extends DurableObject<Env> {
     this.ctx.storage.sql.exec("DELETE FROM messages WHERE id = ?", id);
   }
 
-  async receiveEmail(
+  async receiveMessage(
     fromAddr: string,
     fromName: string,
     subject: string,
     preview: string,
     raw: string,
   ): Promise<void> {
+    // Renew the expiry on any inbound mail. For an uninitialized mailbox this
+    // also arms the alarm so an orphaned DO (mail to an unknown address) is
+    // reclaimed in 7 days instead of lingering forever.
+    await this.touchActivity();
     if (!this.token) return;
     const id = crypto.randomUUID();
     this.ctx.storage.sql.exec(
@@ -130,7 +160,7 @@ export class Mailbox extends DurableObject<Env> {
       raw,
       Date.now(),
     );
-    this.broadcastNewEmail(id);
+    this.broadcastNewMessage(id);
   }
 
   async fetch(request: Request): Promise<Response> {
@@ -150,9 +180,16 @@ export class Mailbox extends DurableObject<Env> {
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): void {
+  async webSocketMessage(ws: WebSocket, message: string | ArrayBuffer): Promise<void> {
     if (message === "ping") {
       ws.send("pong");
+      // A live, pinging connection counts as activity — renew the expiry. Pings
+      // arrive every ~30s, so only re-arm once the alarm has drifted more than a
+      // day from full to avoid a storage write on every ping.
+      const current = await this.ctx.storage.getAlarm();
+      if (current === null || current - Date.now() < SEVEN_DAYS_MS - ONE_DAY_MS) {
+        await this.touchActivity();
+      }
     }
   }
 
@@ -160,8 +197,8 @@ export class Mailbox extends DurableObject<Env> {
     ws.close();
   }
 
-  private broadcastNewEmail(id: string): void {
-    const msg = JSON.stringify({ type: "new_email", id });
+  private broadcastNewMessage(id: string): void {
+    const msg = JSON.stringify({ type: "new_message", id });
     for (const ws of this.ctx.getWebSockets()) {
       ws.send(msg);
     }

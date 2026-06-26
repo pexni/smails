@@ -32,7 +32,7 @@ npx @smails/cli create      # create a mailbox (token saved to ~/.smails)
 npx @smails/cli inbox       # list messages
 npx @smails/cli read <id>   # read a message (id prefix is enough)
 npx @smails/cli whoami      # show the current address
-npx @smails/cli create --new  # replace with a fresh mailbox
+npx @smails/cli create --force  # replace with a fresh mailbox
 ```
 
 ### MCP (for AI agents)

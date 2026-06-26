@@ -2,6 +2,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 export type WsStatus = "connecting" | "connected" | "disconnected";
 
+/**
+ * Close a socket we're intentionally replacing/disposing, detaching its handlers
+ * first so its async `onclose` can't mutate shared state (status, ping timer,
+ * reconnect) for the socket that replaced it — e.g. when the mailbox changes.
+ */
+function detachAndClose(ws: WebSocket | null) {
+  if (!ws) return;
+  ws.onopen = null;
+  ws.onmessage = null;
+  ws.onclose = null;
+  ws.onerror = null;
+  ws.close();
+}
+
 interface UseWebSocketOptions {
   url: string | null;
   onMessage?: (data: unknown) => void;
@@ -47,7 +61,7 @@ export function useWebSocket({
     const currentUrl = urlRef.current;
     if (!currentUrl || disposedRef.current) return;
 
-    wsRef.current?.close();
+    detachAndClose(wsRef.current);
     setStatus("connecting");
 
     const ws = new WebSocket(currentUrl);
@@ -88,28 +102,28 @@ export function useWebSocket({
     wsRef.current = ws;
   }, [maxRetries, startPing, stopPing]);
 
-  const disconnect = useCallback(() => {
+  // Reset the whole socket lifecycle (timers, ping, handlers, ref). Used by both
+  // disconnect() and the effect cleanup so the teardown steps can't drift apart.
+  const teardown = useCallback(() => {
+    disposedRef.current = true;
     clearTimeout(timerRef.current);
     stopPing();
-    disposedRef.current = true;
-    wsRef.current?.close();
+    detachAndClose(wsRef.current);
     wsRef.current = null;
-    setStatus("disconnected");
   }, [stopPing]);
+
+  const disconnect = useCallback(() => {
+    teardown();
+    setStatus("disconnected");
+  }, [teardown]);
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: `url` must stay so the effect re-runs and reconnects when the URL changes
   useEffect(() => {
     disposedRef.current = false;
     retriesRef.current = 0;
     connect();
-    return () => {
-      disposedRef.current = true;
-      clearTimeout(timerRef.current);
-      stopPing();
-      wsRef.current?.close();
-      wsRef.current = null;
-    };
-  }, [url, connect, stopPing]);
+    return teardown;
+  }, [url, connect, teardown]);
 
   return { status, reconnect: connect, disconnect };
 }

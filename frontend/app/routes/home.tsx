@@ -1,8 +1,9 @@
 import { ArrowDown, ArrowLeft, Copy, Plus, RefreshCw, Trash2 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router";
 import { toast } from "sonner";
 import { CodeBlock } from "~/components/code-block";
+import { JsonLd } from "~/components/content";
 import { GITHUB_URL, SiteFooter } from "~/components/site-chrome";
 import {
   Accordion,
@@ -22,14 +23,15 @@ import {
   clearAuth,
   createMailbox,
   deleteMessage,
-  type Email,
-  type EmailDetail as EmailDetailType,
   getAddress,
   getMessage,
   getToken,
   listMessages,
+  type Message,
+  type MessageDetail as MessageDetailType,
 } from "~/lib/api";
 import { formatTime, initials } from "~/lib/format";
+import { faqPage } from "~/lib/seo";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/home";
 
@@ -135,9 +137,9 @@ function buildWsUrl(token: string | null): string | null {
 
 export default function Home() {
   const [address, setAddress] = useState<string>("");
-  const [emails, setEmails] = useState<Email[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<EmailDetailType | null>(null);
+  const [detail, setDetail] = useState<MessageDetailType | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
   const selectedIdRef = useRef<string | null>(null);
@@ -145,10 +147,10 @@ export default function Home() {
 
   const fetchMessages = useCallback(async () => {
     const msgs = await listMessages();
-    setEmails(msgs);
+    setMessages(msgs);
   }, []);
 
-  const wsUrl = useMemo(() => buildWsUrl(token), [token]);
+  const wsUrl = buildWsUrl(token);
 
   const { status: wsStatus } = useWebSocket({
     url: wsUrl,
@@ -157,7 +159,7 @@ export default function Home() {
         data &&
         typeof data === "object" &&
         "type" in data &&
-        (data as { type: string }).type === "new_email"
+        (data as { type: string }).type === "new_message"
       ) {
         fetchMessages();
       }
@@ -171,13 +173,21 @@ export default function Home() {
         const addr = getAddress();
         let needsNewMailbox = !existingToken || !addr;
         if (existingToken && addr) {
+          setAddress(addr);
+          setToken(existingToken);
           try {
-            setAddress(addr);
-            setToken(existingToken);
             await fetchMessages();
-          } catch {
-            clearAuth();
-            needsNewMailbox = true;
+          } catch (err) {
+            // Only discard the saved mailbox when the token is actually
+            // rejected. A transient network/server error must NOT wipe the
+            // user's address — keep it and let them retry.
+            const status = (err as { status?: number })?.status;
+            if (status === 401 || status === 403) {
+              clearAuth();
+              needsNewMailbox = true;
+            } else {
+              toast.error("Couldn't load messages — pull to refresh.");
+            }
           }
         }
         if (needsNewMailbox) {
@@ -194,8 +204,8 @@ export default function Home() {
     init();
   }, [fetchMessages]);
 
-  const selected = emails.find((e) => e.id === selectedId) ?? null;
-  const unreadCount = emails.filter((e) => !e.read).length;
+  const selected = messages.find((m) => m.id === selectedId) ?? null;
+  const unreadCount = messages.filter((m) => !m.read).length;
 
   function copyAddress() {
     navigator.clipboard.writeText(address).then(
@@ -209,7 +219,7 @@ export default function Home() {
       const result = await createMailbox();
       setAddress(result.address);
       setToken(result.token);
-      setEmails([]);
+      setMessages([]);
       setSelectedId(null);
       setDetail(null);
       toast.success("New mailbox created");
@@ -227,12 +237,13 @@ export default function Home() {
     }
   }
 
-  async function openEmail(email: Email) {
-    const targetId = email.id;
+  async function openMessage(message: Message) {
+    const targetId = message.id;
+    const wasUnread = !message.read;
     setSelectedId(targetId);
     setDetail(null);
-    if (!email.read) {
-      setEmails((prev) => prev.map((e) => (e.id === targetId ? { ...e, read: 1 } : e)));
+    if (wasUnread) {
+      setMessages((prev) => prev.map((m) => (m.id === targetId ? { ...m, read: 1 } : m)));
     }
     try {
       const msg = await getMessage(targetId);
@@ -240,6 +251,10 @@ export default function Home() {
         setDetail(msg);
       }
     } catch {
+      // Roll back the optimistic "read" if the message never loaded.
+      if (wasUnread) {
+        setMessages((prev) => prev.map((m) => (m.id === targetId ? { ...m, read: 0 } : m)));
+      }
       toast.error("Failed to load message");
     }
   }
@@ -247,7 +262,7 @@ export default function Home() {
   async function handleDelete(id: string) {
     try {
       await deleteMessage(id);
-      setEmails((prev) => prev.filter((e) => e.id !== id));
+      setMessages((prev) => prev.filter((m) => m.id !== id));
       if (selectedIdRef.current === id) {
         setSelectedId(null);
         setDetail(null);
@@ -260,7 +275,20 @@ export default function Home() {
 
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
-      <StructuredData />
+      <JsonLd
+        graph={[
+          {
+            "@type": "WebApplication",
+            name: "smails",
+            applicationCategory: "CommunicationApplication",
+            operatingSystem: "Web",
+            description:
+              "A free disposable email address with a REST API, CLI, and MCP server. Receive emails in real time with no sign-up.",
+            offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+          },
+          faqPage(FAQ),
+        ]}
+      />
       <Nav />
 
       <main className="mx-auto w-full max-w-5xl flex-1 px-5">
@@ -284,7 +312,7 @@ export default function Home() {
         <section id="inbox" aria-labelledby="inbox-heading" className="scroll-mt-16 pt-12 sm:pt-16">
           <Mailbox
             address={address}
-            emails={emails}
+            messages={messages}
             loading={!loaded}
             selected={selected}
             detail={detail}
@@ -294,7 +322,7 @@ export default function Home() {
             onNew={handleNewAddress}
             onRefresh={handleRefresh}
             onCopy={copyAddress}
-            onOpen={openEmail}
+            onOpen={openMessage}
             onBack={() => {
               setSelectedId(null);
               setDetail(null);
@@ -347,7 +375,7 @@ function Nav() {
 
 function Mailbox({
   address,
-  emails,
+  messages,
   loading,
   selected,
   detail,
@@ -362,17 +390,17 @@ function Mailbox({
   onDelete,
 }: {
   address: string;
-  emails: Email[];
+  messages: Message[];
   loading: boolean;
-  selected: Email | null;
-  detail: EmailDetailType | null;
+  selected: Message | null;
+  detail: MessageDetailType | null;
   selectedId: string | null;
   unreadCount: number;
   wsStatus: WsStatus;
   onNew: () => void;
   onRefresh: () => void;
   onCopy: () => void;
-  onOpen: (e: Email) => void;
+  onOpen: (m: Message) => void;
   onBack: () => void;
   onDelete: (id: string) => void;
 }) {
@@ -406,7 +434,7 @@ function Mailbox({
 
       <div className="flex items-center justify-between border-b border-border px-4 py-2.5">
         <span className="text-xs text-muted-foreground">
-          {emails.length} message{emails.length === 1 ? "" : "s"}
+          {messages.length} message{messages.length === 1 ? "" : "s"}
           {unreadCount > 0 && <span className="text-foreground"> · {unreadCount} unread</span>}
         </span>
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
@@ -437,16 +465,16 @@ function Mailbox({
                   <SkeletonRow key={i} />
                 ))}
               </ul>
-            ) : emails.length === 0 ? (
+            ) : messages.length === 0 ? (
               <EmptyInbox />
             ) : (
               <ul className="divide-y divide-border">
-                {emails.map((email) => (
-                  <EmailListItem
-                    key={email.id}
-                    email={email}
-                    active={email.id === selectedId}
-                    onClick={() => onOpen(email)}
+                {messages.map((message) => (
+                  <MessageListItem
+                    key={message.id}
+                    message={message}
+                    active={message.id === selectedId}
+                    onClick={() => onOpen(message)}
                   />
                 ))}
               </ul>
@@ -456,8 +484,8 @@ function Mailbox({
 
         <section className={cn("min-h-0 min-w-0", !selected && "hidden md:block")}>
           {selected ? (
-            <EmailDetail
-              email={selected}
+            <MessageDetail
+              message={selected}
               detail={detail}
               onBack={onBack}
               onDelete={() => onDelete(selected.id)}
@@ -581,16 +609,16 @@ function Faq() {
   );
 }
 
-function EmailListItem({
-  email,
+function MessageListItem({
+  message,
   active,
   onClick,
 }: {
-  email: Email;
+  message: Message;
   active: boolean;
   onClick: () => void;
 }) {
-  const isRead = !!email.read;
+  const isRead = !!message.read;
   return (
     <li>
       <button
@@ -602,7 +630,7 @@ function EmailListItem({
         )}
       >
         <Avatar className="mt-0.5 size-8 shrink-0">
-          <AvatarFallback>{initials(email.from_name)}</AvatarFallback>
+          <AvatarFallback>{initials(message.from_name)}</AvatarFallback>
         </Avatar>
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
@@ -610,14 +638,14 @@ function EmailListItem({
               className={cn("truncate text-sm", isRead ? "text-muted-foreground" : "font-semibold")}
             >
               {!isRead && <span className="sr-only">Unread. </span>}
-              {email.from_name}
+              {message.from_name}
             </span>
             <span className="shrink-0 text-xs text-muted-foreground">
-              {formatTime(email.received_at)}
+              {formatTime(message.received_at)}
             </span>
           </div>
-          <p className={cn("truncate text-sm", !isRead && "font-medium")}>{email.subject}</p>
-          <p className="truncate text-xs text-muted-foreground">{email.preview}</p>
+          <p className={cn("truncate text-sm", !isRead && "font-medium")}>{message.subject}</p>
+          <p className="truncate text-xs text-muted-foreground">{message.preview}</p>
         </div>
         {!isRead && (
           <span
@@ -630,14 +658,14 @@ function EmailListItem({
   );
 }
 
-function EmailDetail({
-  email,
+function MessageDetail({
+  message,
   detail,
   onBack,
   onDelete,
 }: {
-  email: Email;
-  detail: EmailDetailType | null;
+  message: Message;
+  detail: MessageDetailType | null;
   onBack: () => void;
   onDelete: () => void;
 }) {
@@ -653,21 +681,21 @@ function EmailDetail({
         >
           <ArrowLeft />
         </Button>
-        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{email.subject}</h2>
+        <h2 className="min-w-0 flex-1 truncate text-sm font-semibold">{message.subject}</h2>
         <IconAction label="Delete" onClick={onDelete}>
           <Trash2 />
         </IconAction>
       </div>
       <div className="flex items-center gap-3 border-b border-border px-4 py-3.5">
         <Avatar className="size-9">
-          <AvatarFallback>{initials(email.from_name)}</AvatarFallback>
+          <AvatarFallback>{initials(message.from_name)}</AvatarFallback>
         </Avatar>
         <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{email.from_name}</p>
-          <p className="truncate text-xs text-muted-foreground">{email.from_addr}</p>
+          <p className="truncate text-sm font-medium">{message.from_name}</p>
+          <p className="truncate text-xs text-muted-foreground">{message.from_addr}</p>
         </div>
         <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-          {formatTime(email.received_at)}
+          {formatTime(message.received_at)}
         </span>
       </div>
       <div className="min-h-0 flex-1">
@@ -675,7 +703,7 @@ function EmailDetail({
           <iframe
             sandbox="allow-popups allow-popups-to-escape-sandbox"
             srcDoc={`<meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src data: cid:;">${detail.html}`}
-            title="Email content"
+            title="Message content"
             className="h-full w-full border-0"
           />
         ) : (
@@ -748,34 +776,5 @@ function GithubIcon({ className }: { className?: string }) {
     <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" className={className}>
       <path d="M12 .5C5.37.5 0 5.78 0 12.292c0 5.211 3.438 9.63 8.205 11.188.6.111.82-.254.82-.567 0-.28-.01-1.022-.015-2.005-3.338.711-4.042-1.582-4.042-1.582-.546-1.361-1.335-1.725-1.335-1.725-1.087-.731.084-.716.084-.716 1.205.082 1.838 1.215 1.838 1.215 1.07 1.803 2.809 1.282 3.495.981.108-.763.417-1.282.76-1.577-2.665-.295-5.466-1.309-5.466-5.827 0-1.287.465-2.339 1.235-3.164-.135-.298-.54-1.497.105-3.121 0 0 1.005-.316 3.3 1.209.96-.262 1.98-.392 3-.398 1.02.006 2.04.136 3 .398 2.28-1.525 3.285-1.209 3.285-1.209.645 1.624.24 2.823.12 3.121.765.825 1.23 1.877 1.23 3.164 0 4.53-2.805 5.527-5.475 5.817.42.354.81 1.077.81 2.182 0 1.578-.015 2.846-.015 3.229 0 .309.21.678.825.561C20.565 21.917 24 17.495 24 12.292 24 5.78 18.63.5 12 .5z" />
     </svg>
-  );
-}
-
-function StructuredData() {
-  const data = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "WebApplication",
-        name: "smails",
-        applicationCategory: "CommunicationApplication",
-        operatingSystem: "Web",
-        description:
-          "A free disposable email address with a REST API, CLI, and MCP server. Receive emails in real time with no sign-up.",
-        offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
-      },
-      {
-        "@type": "FAQPage",
-        mainEntity: FAQ.map((item) => ({
-          "@type": "Question",
-          name: item.q,
-          acceptedAnswer: { "@type": "Answer", text: item.a },
-        })),
-      },
-    ],
-  };
-  return (
-    // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted JSON-LD built from static data
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
   );
 }

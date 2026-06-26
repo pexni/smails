@@ -1,37 +1,22 @@
-import { ArrowLeft, ArrowUpRight, Check } from "lucide-react";
 import { Link } from "react-router";
 import { CodeBlock } from "~/components/code-block";
-import { ContentNav, GITHUB_URL, SiteFooter } from "~/components/site-chrome";
+import { Breadcrumb, CheckList, CtaSection, JsonLd } from "~/components/content";
+import { ContentNav, SiteFooter } from "~/components/site-chrome";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
 import { Card } from "~/components/ui/card";
+import { breadcrumbList, pageMeta } from "~/lib/seo";
 import { cn } from "~/lib/utils";
 import type { Route } from "./+types/api";
 
 export function meta(_: Route.MetaArgs) {
-  const url = "https://smails.dev/email-api";
-  const title = "Free disposable email REST API — no signup, no API key | smails";
-  const description =
-    "A free disposable email REST API: create a mailbox and read incoming messages programmatically. No signup, no API key — one POST returns an address and token. Stream new mail over WebSocket. Built for scripts and AI agents. Receive-only.";
-  const image = "https://smails.dev/og.png";
-  return [
-    { title },
-    { name: "description", content: description },
-    { tagName: "link", rel: "canonical", href: url },
-    { property: "og:type", content: "article" },
-    { property: "og:url", content: url },
-    { property: "og:site_name", content: "smails" },
-    { property: "og:title", content: title },
-    { property: "og:description", content: description },
-    { property: "og:image", content: image },
-    { property: "og:image:width", content: "1200" },
-    { property: "og:image:height", content: "630" },
-    { property: "og:image:alt", content: "smails — free disposable email REST API" },
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:title", content: title },
-    { name: "twitter:description", content: description },
-    { name: "twitter:image", content: image },
-  ];
+  return pageMeta({
+    url: "https://smails.dev/email-api",
+    title: "Free disposable email REST API — no signup, no API key | smails",
+    description:
+      "A free disposable email REST API: create a mailbox and read incoming messages programmatically. No signup, no API key — one POST returns an address and token. Stream new mail over WebSocket. Built for scripts and AI agents. Receive-only.",
+    imageAlt: "smails — free disposable email REST API",
+  });
 }
 
 const DIFFERENTIATORS = [
@@ -43,7 +28,10 @@ const DIFFERENTIATORS = [
 
 const CREATE_CODE = `# create a mailbox — no auth, no key
 curl -X POST https://smails.dev/api/mailbox
-# → { "address": "a8f3@smails.dev", "token": "a8f3@smails.dev.s3cr3t" }`;
+# → {
+#   "address": "cool-fox-7a3f9c@smails.dev",
+#   "token": "cool-fox-7a3f9c.5f3a9c2e8b1d4a7c6e0f2b9d8a1c3e5f"
+# }`;
 
 const READ_CODE = `# list messages with the returned token
 curl https://smails.dev/api/mailbox/messages \\
@@ -59,7 +47,7 @@ const ws = new WebSocket(
 );
 ws.onmessage = (e) => {
   const msg = JSON.parse(e.data);
-  if (msg.type === "new_email") fetchMessages();
+  if (msg.type === "new_message") fetchMessages();
 };`;
 
 const ENDPOINTS: { method: string; path: string; desc: string; auth: boolean }[] = [
@@ -88,18 +76,23 @@ const ENDPOINTS: { method: string; path: string; desc: string; auth: boolean }[]
 export default function Api() {
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
-      <StructuredData />
+      <JsonLd
+        graph={[
+          {
+            "@type": "TechArticle",
+            headline: "A free disposable email REST API, no key required",
+            description:
+              "Create a disposable mailbox and read incoming messages programmatically with a free REST API — no signup, no API key. Poll or stream over WebSocket. Built for scripts and AI agents.",
+            about: "Disposable email REST API",
+            url: "https://smails.dev/email-api",
+          },
+          breadcrumbList("REST API", "https://smails.dev/email-api"),
+        ]}
+      />
       <ContentNav current="api" />
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-5">
-        <nav aria-label="Breadcrumb" className="pt-10 text-xs text-muted-foreground">
-          <Link to="/" className="inline-flex items-center gap-1 hover:text-foreground">
-            <ArrowLeft className="size-3" />
-            smails
-          </Link>
-          <span className="mx-2">/</span>
-          <span className="text-foreground">REST API</span>
-        </nav>
+        <Breadcrumb label="REST API" />
 
         <header className="pt-8 sm:pt-12">
           <Badge variant="secondary">REST API · Free · No API key · No signup</Badge>
@@ -122,14 +115,7 @@ export default function Api() {
 
         <section className="pt-16 sm:pt-20">
           <h2 className="text-2xl font-semibold tracking-tight">Why this one</h2>
-          <ul className="mt-6 space-y-3">
-            {DIFFERENTIATORS.map((d) => (
-              <li key={d} className="flex gap-3 text-sm sm:text-base">
-                <Check className="mt-0.5 size-4 shrink-0 text-success" />
-                <span className="text-muted-foreground">{d}</span>
-              </li>
-            ))}
-          </ul>
+          <CheckList items={DIFFERENTIATORS} />
         </section>
 
         <section id="quickstart" className="scroll-mt-16 pt-16 sm:pt-20">
@@ -176,9 +162,8 @@ export default function Api() {
           </Card>
           <p className="mt-4 text-sm text-muted-foreground">
             Authenticate every request except create with{" "}
-            <code className="font-mono">Authorization: Bearer &lt;token&gt;</code>. The token is{" "}
-            <code className="font-mono">{"{address}.{secret}"}</code> — keep it; it's the only way
-            back into the mailbox.
+            <code className="font-mono">Authorization: Bearer &lt;token&gt;</code>. Keep the
+            returned token — it's the only credential for the mailbox.
           </p>
         </section>
 
@@ -202,69 +187,20 @@ export default function Api() {
           </div>
         </section>
 
-        <section className="pt-16 pb-8 sm:pt-20">
-          <Card className="flex flex-col items-center gap-4 p-8 text-center">
-            <h2 className="text-xl font-semibold tracking-tight">Build with it.</h2>
-            <p className="max-w-md text-sm text-muted-foreground">
-              Extracting a code in an agent? See{" "}
-              <Link to="/otp" className="font-medium text-foreground underline underline-offset-4">
-                reading verification codes
-              </Link>
-              , or plug in the{" "}
-              <Link to="/mcp" className="font-medium text-foreground underline underline-offset-4">
-                MCP server
-              </Link>
-              .
-            </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              <Button render={<Link to="/" />}>Open smails</Button>
-              <Button
-                variant="outline"
-                render={
-                  <a href={GITHUB_URL} target="_blank" rel="noreferrer">
-                    GitHub
-                    <ArrowUpRight />
-                  </a>
-                }
-              />
-            </div>
-          </Card>
-        </section>
+        <CtaSection title="Build with it.">
+          Extracting a code in an agent? See{" "}
+          <Link to="/otp" className="font-medium text-foreground underline underline-offset-4">
+            reading verification codes
+          </Link>
+          , or plug in the{" "}
+          <Link to="/mcp" className="font-medium text-foreground underline underline-offset-4">
+            MCP server
+          </Link>
+          .
+        </CtaSection>
       </main>
 
       <SiteFooter />
     </div>
-  );
-}
-
-function StructuredData() {
-  const data = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "TechArticle",
-        headline: "A free disposable email REST API, no key required",
-        description:
-          "Create a disposable mailbox and read incoming messages programmatically with a free REST API — no signup, no API key. Poll or stream over WebSocket. Built for scripts and AI agents.",
-        about: "Disposable email REST API",
-        url: "https://smails.dev/email-api",
-      },
-      {
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          { "@type": "ListItem", position: 1, name: "smails", item: "https://smails.dev/" },
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: "REST API",
-            item: "https://smails.dev/email-api",
-          },
-        ],
-      },
-    ],
-  };
-  return (
-    // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted JSON-LD built from static data
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
   );
 }

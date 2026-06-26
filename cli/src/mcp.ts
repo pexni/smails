@@ -3,7 +3,8 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { z } from "zod";
 import pkg from "../package.json" with { type: "json" };
 import { SmailsAPI } from "./api.js";
-import { loadConfig, saveConfig } from "./config.js";
+import { loadConfig } from "./config.js";
+import { createMailbox } from "./mailbox.js";
 
 export async function runMCP() {
   const server = new McpServer({
@@ -27,20 +28,17 @@ export async function runMCP() {
       force: z.boolean().optional().describe("Set to true to replace an existing mailbox"),
     },
     async ({ domain, force }) => {
-      const existing = loadConfig();
-      if (existing && !force) {
+      const result = await createMailbox(domain, force ?? false);
+      if (!result.created) {
         return {
           content: [
             {
               type: "text",
-              text: `A mailbox already exists: ${existing.address}. Pass force=true to replace it.`,
+              text: `A mailbox already exists: ${result.existing}. Pass force=true to replace it.`,
             },
           ],
         };
       }
-      const api = new SmailsAPI();
-      const result = await api.createMailbox(domain);
-      saveConfig({ address: result.address, token: result.token });
       return { content: [{ type: "text", text: `Mailbox created: ${result.address}` }] };
     },
   );
