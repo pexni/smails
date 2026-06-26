@@ -2,7 +2,7 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.pexni/smails",
   "title": "smails",
-  "description": "Free disposable email for AI agents — no API key, no signup. Create a throwaway inbox and read verification codes and magic links over MCP.",
+  "description": "Free disposable email for AI agents: a throwaway inbox to read verification codes over MCP.",
   "websiteUrl": "https://smails.dev",
   "repository": {
     "url": "https://github.com/pexni/smails",
