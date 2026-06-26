@@ -73,6 +73,28 @@ export function clearAuth() {
   }
 }
 
+const VERSION_HEADER = "X-Smails-Version";
+let serverVersion: string | null = null;
+let onUpdate: (() => void) | null = null;
+
+/** Register a callback fired once when the backend deploy id changes mid-session. */
+export function onServerUpdate(cb: () => void) {
+  onUpdate = cb;
+}
+
+// Compare the deploy id stamped on each API response against the one first seen
+// this session; a change means the backend was redeployed and this tab is stale.
+function checkVersion(res: Response) {
+  const version = res.headers.get(VERSION_HEADER);
+  if (!version) return;
+  if (serverVersion === null) {
+    serverVersion = version;
+  } else if (version !== serverVersion) {
+    serverVersion = version;
+    onUpdate?.();
+  }
+}
+
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const token = getToken();
   const headers: Record<string, string> = {
@@ -82,6 +104,7 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
     headers.Authorization = `Bearer ${token}`;
   }
   const res = await fetch(path, { ...options, headers });
+  checkVersion(res);
   if (!res.ok) {
     const body = (await res.json().catch(() => ({ error: res.statusText }))) as { error?: string };
     const error = new Error(body.error || `HTTP ${res.status}`) as Error & { status?: number };

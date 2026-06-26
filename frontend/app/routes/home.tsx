@@ -29,6 +29,7 @@ import {
   listMessages,
   type Message,
   type MessageDetail as MessageDetailType,
+  onServerUpdate,
 } from "~/lib/api";
 import { formatTime, initials } from "~/lib/format";
 import { faqPage } from "~/lib/seo";
@@ -203,6 +204,16 @@ export default function Home() {
     }
     init();
   }, [fetchMessages]);
+
+  useEffect(() => {
+    onServerUpdate(() => {
+      toast("A new version is available.", {
+        id: "app-update",
+        duration: Number.POSITIVE_INFINITY,
+        action: { label: "Refresh", onClick: () => window.location.reload() },
+      });
+    });
+  }, []);
 
   const selected = messages.find((m) => m.id === selectedId) ?? null;
   const unreadCount = messages.filter((m) => !m.read).length;

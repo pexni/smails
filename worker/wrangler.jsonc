@@ -17,6 +17,9 @@
   "vars": {
     "DOMAINS": "smails.dev"
   },
+  "version_metadata": {
+    "binding": "CF_VERSION"
+  },
   "durable_objects": {
     "bindings": [
       {

@@ -7,6 +7,13 @@ export { Mailbox };
 
 const app = new Hono<{ Bindings: Env }>();
 
+// Tag every API response with the current deploy id so the frontend can detect
+// when the backend has been updated and prompt the user to refresh.
+app.use(async (c, next) => {
+  await next();
+  c.header("X-Smails-Version", c.env.CF_VERSION.id);
+});
+
 function generateAddress(): string {
   const name = randomName();
   const bytes = new Uint8Array(3);
