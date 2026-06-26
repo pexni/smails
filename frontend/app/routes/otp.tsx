@@ -1,42 +1,20 @@
-import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { Link } from "react-router";
 import { CodeBlock } from "~/components/code-block";
-import { ContentNav, GITHUB_URL, SiteFooter } from "~/components/site-chrome";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "~/components/ui/accordion";
+import { Breadcrumb, CtaSection, FaqSection, JsonLd, NumberedSteps } from "~/components/content";
+import { ContentNav, SiteFooter } from "~/components/site-chrome";
 import { Badge } from "~/components/ui/badge";
 import { Button } from "~/components/ui/button";
-import { Card } from "~/components/ui/card";
+import { breadcrumbList, faqPage, pageMeta } from "~/lib/seo";
 import type { Route } from "./+types/otp";
 
 export function meta(_: Route.MetaArgs) {
-  const url = "https://smails.dev/otp";
-  const title = "Get verification codes & OTPs from email — API, CLI & MCP | smails";
-  const description =
-    "A free disposable inbox for receiving OTPs, verification codes, and magic links — no signup. Read them from the web, the CLI, the REST API, or an MCP server so a script or AI agent can finish a sign-up on its own. Receive-only.";
-  const image = "https://smails.dev/og.png";
-  return [
-    { title },
-    { name: "description", content: description },
-    { tagName: "link", rel: "canonical", href: url },
-    { property: "og:type", content: "article" },
-    { property: "og:url", content: url },
-    { property: "og:site_name", content: "smails" },
-    { property: "og:title", content: title },
-    { property: "og:description", content: description },
-    { property: "og:image", content: image },
-    { property: "og:image:width", content: "1200" },
-    { property: "og:image:height", content: "630" },
-    { property: "og:image:alt", content: "smails — get verification codes from email" },
-    { name: "twitter:card", content: "summary_large_image" },
-    { name: "twitter:title", content: title },
-    { name: "twitter:description", content: description },
-    { name: "twitter:image", content: image },
-  ];
+  return pageMeta({
+    url: "https://smails.dev/otp",
+    title: "Get verification codes & OTPs from email — API, CLI & MCP | smails",
+    description:
+      "A free disposable inbox for receiving OTPs, verification codes, and magic links — no signup. Read them from the web, the CLI, the REST API, or an MCP server so a script or AI agent can finish a sign-up on its own. Receive-only.",
+    imageAlt: "smails — get verification codes from email",
+  });
 }
 
 const CLI_CODE = `# create a disposable inbox, then read the code
@@ -49,9 +27,10 @@ TOKEN=$(curl -sX POST https://smails.dev/api/mailbox | jq -r .token)
 # ...use the address, then read the latest message:
 curl -s https://smails.dev/api/mailbox/messages \\
   -H "Authorization: Bearer $TOKEN" | jq -r '.[0].id'
-# fetch its body and grep the 6-digit code:
+# fetch its body, then grep the 6-digit code out of it:
 curl -s https://smails.dev/api/mailbox/messages/<id> \\
-  -H "Authorization: Bearer $TOKEN" | grep -oE '[0-9]{6}'`;
+  -H "Authorization: Bearer $TOKEN" \\
+  | jq -r '.text // .html' | grep -oE '\\b[0-9]{6}\\b' | head -1`;
 
 const STEPS = [
   "Create a disposable mailbox — instantly, with no signup.",
@@ -83,18 +62,23 @@ const FAQ = [
 export default function Otp() {
   return (
     <div className="flex min-h-dvh flex-col bg-background text-foreground">
-      <StructuredData />
+      <JsonLd
+        graph={[
+          {
+            "@type": "HowTo",
+            name: "Get a verification code or OTP from email with a disposable inbox",
+            description:
+              "Use a free disposable inbox to receive an OTP, verification code, or magic link and read it from the web, CLI, REST API, or an MCP server.",
+            step: STEPS.map((s, i) => ({ "@type": "HowToStep", position: i + 1, text: s })),
+          },
+          faqPage(FAQ),
+          breadcrumbList("Verification codes", "https://smails.dev/otp"),
+        ]}
+      />
       <ContentNav current="otp" />
 
       <main className="mx-auto w-full max-w-3xl flex-1 px-5">
-        <nav aria-label="Breadcrumb" className="pt-10 text-xs text-muted-foreground">
-          <Link to="/" className="inline-flex items-center gap-1 hover:text-foreground">
-            <ArrowLeft className="size-3" />
-            smails
-          </Link>
-          <span className="mx-2">/</span>
-          <span className="text-foreground">Verification codes</span>
-        </nav>
+        <Breadcrumb label="Verification codes" />
 
         <header className="pt-8 sm:pt-12">
           <Badge variant="secondary">OTP · Magic links · Free · No signup</Badge>
@@ -116,16 +100,7 @@ export default function Otp() {
 
         <section id="how" className="scroll-mt-16 pt-16 sm:pt-20">
           <h2 className="text-2xl font-semibold tracking-tight">How it works</h2>
-          <ol className="mt-6 space-y-4">
-            {STEPS.map((step, i) => (
-              <li key={step} className="flex gap-4">
-                <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted font-mono text-xs font-medium">
-                  {i + 1}
-                </span>
-                <p className="pt-1 text-sm text-muted-foreground sm:text-base">{step}</p>
-              </li>
-            ))}
-          </ol>
+          <NumberedSteps items={STEPS} />
         </section>
 
         <section className="pt-16 sm:pt-20">
@@ -158,82 +133,14 @@ export default function Otp() {
           </p>
         </section>
 
-        <section className="pt-16 sm:pt-20">
-          <h2 className="text-2xl font-semibold tracking-tight">FAQ</h2>
-          <Card className="mt-6 gap-0 p-0">
-            <Accordion multiple={false} className="w-full">
-              {FAQ.map((item) => (
-                <AccordionItem key={item.q} value={item.q} className="px-5">
-                  <AccordionTrigger>{item.q}</AccordionTrigger>
-                  <AccordionContent className="text-muted-foreground">{item.a}</AccordionContent>
-                </AccordionItem>
-              ))}
-            </Accordion>
-          </Card>
-        </section>
+        <FaqSection items={FAQ} />
 
-        <section className="pt-16 pb-8 sm:pt-20">
-          <Card className="flex flex-col items-center gap-4 p-8 text-center">
-            <h2 className="text-xl font-semibold tracking-tight">Never wait on a code again.</h2>
-            <p className="max-w-md text-sm text-muted-foreground">
-              Open a disposable inbox and start receiving verification codes in seconds.
-            </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              <Button render={<Link to="/" />}>Open smails</Button>
-              <Button
-                variant="outline"
-                render={
-                  <a href={GITHUB_URL} target="_blank" rel="noreferrer">
-                    GitHub
-                    <ArrowUpRight />
-                  </a>
-                }
-              />
-            </div>
-          </Card>
-        </section>
+        <CtaSection title="Never wait on a code again.">
+          Open a disposable inbox and start receiving verification codes in seconds.
+        </CtaSection>
       </main>
 
       <SiteFooter />
     </div>
-  );
-}
-
-function StructuredData() {
-  const data = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "HowTo",
-        name: "Get a verification code or OTP from email with a disposable inbox",
-        description:
-          "Use a free disposable inbox to receive an OTP, verification code, or magic link and read it from the web, CLI, REST API, or an MCP server.",
-        step: STEPS.map((s, i) => ({ "@type": "HowToStep", position: i + 1, text: s })),
-      },
-      {
-        "@type": "FAQPage",
-        mainEntity: FAQ.map((item) => ({
-          "@type": "Question",
-          name: item.q,
-          acceptedAnswer: { "@type": "Answer", text: item.a },
-        })),
-      },
-      {
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          { "@type": "ListItem", position: 1, name: "smails", item: "https://smails.dev/" },
-          {
-            "@type": "ListItem",
-            position: 2,
-            name: "Verification codes",
-            item: "https://smails.dev/otp",
-          },
-        ],
-      },
-    ],
-  };
-  return (
-    // biome-ignore lint/security/noDangerouslySetInnerHtml: trusted JSON-LD built from static data
-    <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(data) }} />
   );
 }

@@ -14,7 +14,7 @@ npx @smails/cli inbox         # list messages
 npx @smails/cli read <id>     # read a message (full id or short prefix)
 npx @smails/cli delete <id>   # delete a message
 npx @smails/cli whoami        # show the current address
-npx @smails/cli create --new  # replace with a fresh mailbox
+npx @smails/cli create --force  # replace with a fresh mailbox
 ```
 
 Install globally for a shorter command:

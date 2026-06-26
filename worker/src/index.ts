@@ -1,7 +1,7 @@
 import { randomName } from "@scaleway/random-name";
 import { Hono } from "hono";
 import PostalMime from "postal-mime";
-import { AppError, Mailbox } from "./mailbox";
+import { httpStatusForError, Mailbox } from "./mailbox";
 
 export { Mailbox };
 
@@ -61,7 +61,7 @@ app.post("/api/mailbox", async (c) => {
   const secret = generateSecret();
   const token = `${address}.${secret}`;
   const stub = c.env.MAILBOX.getByName(address);
-  const result = await stub.init(token, domain);
+  const result = await stub.create(token, domain);
   return c.json(result, 201);
 });
 
@@ -111,8 +111,9 @@ authed.delete("/messages/:id", async (c) => {
 app.route("/api/mailbox", authed);
 
 app.onError((err, c) => {
-  if (err instanceof AppError) {
-    return c.json({ error: err.message }, err.status as 400);
+  const status = httpStatusForError(err);
+  if (status !== null) {
+    return c.json({ error: err.message }, status as 400);
   }
   return c.json({ error: "Internal error" }, 500);
 });
@@ -121,8 +122,10 @@ export default {
   fetch: app.fetch,
 
   async email(message: ForwardableEmailMessage, env: Env): Promise<void> {
-    if (message.rawSize > 2 * 1024 * 1024) {
-      message.setReject("Message too large (max 2MB)");
+    // Stored base64 inflates the raw by ~4/3; bounce anything that wouldn't fit
+    // under the ~2 MB Durable Object SQLite row limit.
+    if (message.rawSize > 1.4 * 1024 * 1024) {
+      message.setReject("Message too large (max 1.4MB)");
       return;
     }
 
@@ -131,14 +134,29 @@ export default {
 
     const rawBytes = new Uint8Array(await new Response(message.raw).arrayBuffer());
     const raw = toBase64(rawBytes);
-    const parsed = await PostalMime.parse(rawBytes);
 
-    await stub.receiveEmail(
-      message.from,
-      parsed.from?.name || message.from,
-      parsed.subject || "(no subject)",
-      (parsed.text || "").substring(0, 200).replace(/\n/g, " "),
-      raw,
-    );
+    // Parse for display fields; if the MIME is malformed, fall back to
+    // placeholders so the message is still retained rather than bounced.
+    let fromName = message.from;
+    let subject = "(no subject)";
+    let preview = "";
+    try {
+      const parsed = await PostalMime.parse(rawBytes);
+      fromName = parsed.from?.name || message.from;
+      subject = parsed.subject || "(no subject)";
+      preview = (parsed.text || "").substring(0, 200).replace(/\n/g, " ");
+    } catch {
+      // keep placeholders; the raw message is still stored
+    }
+
+    try {
+      await stub.receiveMessage(message.from, fromName, subject, preview, raw);
+    } catch (err) {
+      // Storing failed (transient DO error, or the row exceeded SQLite limits).
+      // Don't silently accept — surface it so Email Routing reports the failure
+      // and the sender retries, instead of the message being lost without a trace.
+      console.error("receiveMessage failed", err);
+      throw err;
+    }
   },
 } satisfies ExportedHandler<Env>;

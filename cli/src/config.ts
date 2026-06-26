@@ -10,11 +10,21 @@ interface Config {
 }
 
 export function loadConfig(): Config | null {
+  let data: string;
   try {
-    const data = readFileSync(CONFIG_PATH, "utf-8");
+    data = readFileSync(CONFIG_PATH, "utf-8");
+  } catch (err) {
+    // No mailbox yet — that's fine. Any other read error (permissions, etc.)
+    // must surface so we never treat an existing config as absent.
+    if ((err as { code?: string }).code === "ENOENT") return null;
+    throw new Error(`Cannot read ${CONFIG_PATH}: ${(err as Error).message}`);
+  }
+  try {
     return JSON.parse(data) as Config;
   } catch {
-    return null;
+    throw new Error(
+      `Config file ${CONFIG_PATH} is corrupt. Remove it (or run \`smails create --force\`) to start over.`,
+    );
   }
 }
 

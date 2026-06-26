@@ -1,5 +1,6 @@
 import { SmailsAPI } from "./api.js";
-import { loadConfig, saveConfig } from "./config.js";
+import { loadConfig } from "./config.js";
+import { createMailbox } from "./mailbox.js";
 
 const HELP = `smails — disposable email for humans and agents
 
@@ -7,7 +8,7 @@ Usage: smails <command> [options]
 
 Commands:
   create [--domain <d>]   Create a new mailbox (token saved to ~/.smails)
-  create --new            Replace the current mailbox with a fresh one
+  create --force          Replace the current mailbox with a fresh one
   inbox                   List messages
   read <id>               Read a message (full id or short prefix)
   delete <id>             Delete a message (full id or short prefix)
@@ -56,16 +57,12 @@ async function resolveMessageId(api: SmailsAPI, idOrPrefix: string): Promise<str
 }
 
 async function create(args: string[]) {
-  const existing = loadConfig();
-  const isNew = args.includes("--new");
-  if (existing && !isNew) {
-    console.log(`You already have a mailbox: ${existing.address}`);
-    console.log("Use `smails create --new` to create a new one.");
+  const result = await createMailbox(flag(args, "--domain"), args.includes("--force"));
+  if (!result.created) {
+    console.log(`You already have a mailbox: ${result.existing}`);
+    console.log("Use `smails create --force` to create a new one.");
     return;
   }
-  const api = new SmailsAPI();
-  const result = await api.createMailbox(flag(args, "--domain"));
-  saveConfig({ address: result.address, token: result.token });
   console.log(`Mailbox created: ${result.address}`);
 }
 
