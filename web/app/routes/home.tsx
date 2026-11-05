@@ -76,6 +76,26 @@ const styles = stylex.create({
 		},
 		textAlign: "center",
 	},
+	// 给只想在浏览器里收邮件的人：标题正上方一个小链接，第一眼就能看到，又不抢主要操作。
+	humanLink: {
+		display: "inline-flex",
+		alignItems: "center",
+		gap: space.sm,
+		marginBottom: space["2xl"],
+		paddingBlock: space.xs,
+		paddingInline: space.md,
+		borderWidth: "1px",
+		borderStyle: "solid",
+		borderColor: { default: color.border, ":hover": color.borderStrong },
+		borderRadius: radius.full,
+		color: { default: color.muted, ":hover": color.text },
+		fontSize: text.sm,
+		whiteSpace: "nowrap",
+		textDecoration: "none",
+		transitionProperty: "border-color, color",
+		transitionDuration: "120ms",
+	},
+	humanLinkStrong: { color: color.text, fontWeight: 500 },
 	title: {
 		margin: 0,
 		fontSize: "clamp(2.75rem, 1.6rem + 4.6vw, 5rem)",
@@ -200,12 +220,6 @@ const styles = stylex.create({
 		color: color.muted,
 		fontSize: text.sm,
 	},
-	humans: {
-		paddingBottom: space["3xl"],
-		color: color.subtle,
-		fontSize: text.sm,
-		textAlign: "center",
-	},
 });
 
 function PromptBox() {
@@ -240,6 +254,10 @@ export default function Home() {
 	return (
 		<>
 			<section {...stylex.attrs(styles.container, styles.hero)}>
+				<a href="https://smail.pw" {...stylex.attrs(styles.humanLink)}>
+					Just need an inbox?
+					<span {...stylex.attrs(styles.humanLinkStrong)}>Use smail.pw →</span>
+				</a>
 				<h1 {...stylex.attrs(styles.title)}>
 					Email inboxes
 					<br />
@@ -281,13 +299,6 @@ export default function Home() {
 					</div>
 					<CodeTabs tabs={MANUAL} />
 				</section>
-
-				<p {...stylex.attrs(styles.humans)}>
-					Need a throwaway inbox for yourself?{" "}
-					<a href="https://smail.pw" {...stylex.attrs(styles.hintLink)}>
-						Use smail.pw
-					</a>
-				</p>
 			</div>
 		</>
 	);
