@@ -23,5 +23,5 @@
 			}
 		}
 	],
-	"ignorePatterns": ["**/dist", "**/.cloudflare", "**/.wrangler", "cli"]
+	"ignorePatterns": ["**/dist", "**/.cloudflare", "**/.wrangler"]
 }

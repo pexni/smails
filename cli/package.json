@@ -1,49 +1,51 @@
 {
-  "name": "@smails/cli",
-  "version": "0.0.12",
-  "mcpName": "io.github.pexni/smails",
-  "description": "Disposable email for humans and AI agents — a throwaway inbox with a CLI and an MCP server. Let your agent receive verification codes and emails.",
-  "type": "module",
-  "license": "MIT",
-  "keywords": [
-    "email",
-    "disposable-email",
-    "temporary-email",
-    "throwaway-email",
-    "inbox",
-    "mcp",
-    "model-context-protocol",
-    "mcp-server",
-    "ai",
-    "agent",
-    "cli"
-  ],
-  "homepage": "https://smails.dev",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/pexni/smails.git",
-    "directory": "cli"
-  },
-  "files": [
-    "dist"
-  ],
-  "bin": {
-    "smails": "dist/index.js"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
-  "scripts": {
-    "build": "tsup src/index.ts --format esm --shims",
-    "dev": "tsup src/index.ts --format esm --shims --watch"
-  },
-  "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.12.1",
-    "zod": "^4.4.3"
-  },
-  "devDependencies": {
-    "@types/node": "^22.0.0",
-    "tsup": "^8.0.0",
-    "typescript": "^5.5.0"
-  }
+	"name": "@smails/cli",
+	"version": "0.1.0",
+	"description": "Disposable email for AI agents — sign in once, then create inboxes and wait for verification codes from the CLI or any MCP client.",
+	"keywords": [
+		"agent",
+		"ai",
+		"cli",
+		"disposable-email",
+		"email",
+		"inbox",
+		"mcp",
+		"mcp-server",
+		"model-context-protocol",
+		"temporary-email",
+		"throwaway-email"
+	],
+	"homepage": "https://smails.dev",
+	"license": "MIT",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/pexni/smails.git",
+		"directory": "cli"
+	},
+	"bin": {
+		"smails": "dist/index.js"
+	},
+	"files": [
+		"dist"
+	],
+	"type": "module",
+	"publishConfig": {
+		"access": "public"
+	},
+	"scripts": {
+		"build": "tsdown",
+		"dev": "tsdown --watch",
+		"typecheck": "tsc -p tsconfig.json",
+		"test": "vitest run"
+	},
+	"devDependencies": {
+		"@types/node": "^26.6.6",
+		"tsdown": "^0.23.5",
+		"typescript": "^7.0.2",
+		"vitest": "^5.1.0"
+	},
+	"engines": {
+		"node": ">=22.18"
+	},
+	"mcpName": "io.github.pexni/smails"
 }

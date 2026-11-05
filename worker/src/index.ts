@@ -2,6 +2,7 @@ import { handleApi } from "./api.ts";
 import { migrateLocally } from "./dev-migrate.ts";
 import { errorResponse, HttpError, json } from "./http.ts";
 import { receiveEmail } from "./mail.ts";
+import { handleMcp } from "./mcp.ts";
 import { handleIdentity } from "./oauth/index.ts";
 import { originOf } from "./tokens.ts";
 import { HUB_NAME } from "./wait.ts";
@@ -47,6 +48,9 @@ async function route(
 	const { pathname } = new URL(request.url);
 	const origin = originOf(request, env.SITE_DOMAIN);
 
+	if (pathname === "/mcp") {
+		return handleMcp(request, env, ctx, origin);
+	}
 	const identity = await handleIdentity(request, env, origin);
 	if (identity) {
 		return identity;

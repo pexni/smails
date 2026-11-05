@@ -1,6 +1,7 @@
 packages:
   - web
   - worker
+  - cli
 allowBuilds:
   esbuild: true
   workerd: true

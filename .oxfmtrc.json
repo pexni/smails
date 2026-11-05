@@ -5,5 +5,5 @@
 	"sortImports": true,
 	"sortPackageJson": true,
 	// Markdown 是文案和文档，不让格式化工具改动它们的换行和标点。
-	"ignorePatterns": ["**/*.md", "pnpm-lock.yaml", "cli"]
+	"ignorePatterns": ["**/*.md", "pnpm-lock.yaml"]
 }
