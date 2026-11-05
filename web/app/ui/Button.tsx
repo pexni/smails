@@ -35,10 +35,20 @@ const styles = stylex.create({
 		opacity: { default: 1, ":hover": 0.86, ":disabled": 0.45 },
 	},
 	outline: {
-		backgroundColor: "transparent",
+		backgroundColor: { default: "transparent", ":hover": color.raised },
 		color: color.text,
 		borderColor: { default: color.borderStrong, ":hover": color.text },
 		opacity: { default: 1, ":disabled": 0.45 },
+	},
+	// 主行动按钮：荧光绿加一圈光。一屏只放一个。
+	accent: {
+		backgroundColor: color.accent,
+		color: color.onAccent,
+		boxShadow: {
+			default: `0 0 0 1px ${color.accent}, 0 8px 28px -8px ${color.glow}`,
+			":hover": `0 0 0 1px ${color.accent}, 0 10px 36px -6px ${color.glow}`,
+		},
+		opacity: { default: 1, ":hover": 0.92, ":disabled": 0.45 },
 	},
 	danger: {
 		backgroundColor: "transparent",
@@ -49,7 +59,7 @@ const styles = stylex.create({
 	small: { minHeight: "2rem", paddingInline: space.md, fontSize: text.sm },
 });
 
-type Variant = "solid" | "outline" | "danger";
+type Variant = "solid" | "outline" | "danger" | "accent";
 
 export function Button(
 	props: JSX.ButtonHTMLAttributes<HTMLButtonElement> & {

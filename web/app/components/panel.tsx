@@ -6,7 +6,13 @@ import { color, font, radius, space, text } from "#/ui/tokens.stylex.ts";
 // 登录相关的几个页面（Device Login、授权确认、账号）：页面中间一张卡片。
 
 const styles = stylex.create({
-	wrap: { display: "flex", justifyContent: "center", paddingTop: space["3xl"] },
+	wrap: {
+		display: "flex",
+		justifyContent: "center",
+		paddingTop: space["4xl"],
+		paddingBottom: space["4xl"],
+		paddingInline: space.xl,
+	},
 	panel: {
 		width: "100%",
 		maxWidth: "28rem",
@@ -15,15 +21,21 @@ const styles = stylex.create({
 		borderWidth: "1px",
 		borderStyle: "solid",
 		borderColor: color.border,
-		borderRadius: radius.lg,
+		borderRadius: radius.xl,
+		backgroundColor: color.surface,
+		boxShadow: "0 30px 80px -40px rgb(0 0 0 / 0.5)",
 	},
 	title: { marginBlock: `0 ${space.md}`, fontSize: text.xl, lineHeight: 1.25 },
 	text: { marginBlock: space.md, color: color.muted },
 	code: {
 		marginBlock: space.lg,
 		paddingBlock: space.lg,
+		borderWidth: "1px",
+		borderStyle: "solid",
+		borderColor: color.border,
 		borderRadius: radius.md,
-		backgroundColor: color.surface,
+		backgroundColor: color.raised,
+		color: color.accentText,
 		fontFamily: font.mono,
 		fontSize: text["2xl"],
 		fontWeight: 700,

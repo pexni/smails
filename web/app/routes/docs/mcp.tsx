@@ -30,7 +30,7 @@ export default function McpDocs() {
 	});
 	return (
 		<Article
-			eyebrow="Docs"
+			docs
 			title="MCP server"
 			lead="Let your agent create inboxes and wait for verification emails. Use the remote server (sign in with GitHub when your client asks), or run it locally over stdio."
 		>

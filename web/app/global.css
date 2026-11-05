@@ -1,8 +1,16 @@
 :root {
-	color-scheme: light dark;
+	color-scheme: dark light;
 	-webkit-font-smoothing: antialiased;
 	-moz-osx-font-smoothing: grayscale;
 	-webkit-text-size-adjust: 100%;
+	/* 页面边缘回弹时露出来的底色，和 tokens.stylex.ts 里的 bg 一致。 */
+	background-color: #08090a;
+}
+
+@media (prefers-color-scheme: light) {
+	:root {
+		background-color: #fbfbfa;
+	}
 }
 
 *,
@@ -13,4 +21,18 @@
 
 body {
 	margin: 0;
+}
+
+::selection {
+	background-color: rgb(180 244 97 / 0.3);
+}
+
+@media (prefers-reduced-motion: reduce) {
+	*,
+	*::before,
+	*::after {
+		animation-duration: 0.01ms !important;
+		animation-iteration-count: 1 !important;
+		transition-duration: 0.01ms !important;
+	}
 }

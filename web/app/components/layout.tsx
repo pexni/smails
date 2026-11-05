@@ -1,13 +1,41 @@
 import * as stylex from "@stylexjs/stylex";
 import type { ParentProps } from "solid-js";
 
+import { ButtonLink } from "#/ui/Button.tsx";
+import { Logo } from "#/ui/Logo.tsx";
 import { color, font, layout, space, text } from "#/ui/tokens.stylex.ts";
 
 const NAV = [
 	{ href: "/docs/mcp", label: "MCP" },
 	{ href: "/docs/cli", label: "CLI" },
 	{ href: "/docs/api", label: "API" },
-	{ href: "/account", label: "Account" },
+];
+
+const FOOTER = [
+	{
+		title: "Product",
+		links: [
+			{ href: "/docs/mcp", label: "MCP server" },
+			{ href: "/docs/cli", label: "CLI" },
+			{ href: "/docs/api", label: "HTTP API" },
+			{ href: "/otp", label: "Verification codes" },
+		],
+	},
+	{
+		title: "Account",
+		links: [
+			{ href: "/account", label: "Account" },
+			{ href: "/privacy", label: "Privacy" },
+		],
+	},
+	{
+		title: "More",
+		links: [
+			{ href: "https://github.com/pexni/smails", label: "GitHub" },
+			{ href: "https://www.npmjs.com/package/@smails/cli", label: "npm" },
+			{ href: "https://smail.pw", label: "smail.pw — inbox for people" },
+		],
+	},
 ];
 
 const styles = stylex.create({
@@ -22,29 +50,29 @@ const styles = stylex.create({
 		lineHeight: 1.6,
 	},
 	header: {
+		position: "sticky",
+		top: 0,
+		zIndex: 10,
+		borderBottomWidth: "1px",
+		borderBottomStyle: "solid",
+		borderBottomColor: color.border,
+		backgroundColor: `color-mix(in srgb, ${color.bg} 78%, transparent)`,
+		backdropFilter: "saturate(1.4) blur(12px)",
+	},
+	headerInner: {
 		display: "flex",
 		alignItems: "center",
-		justifyContent: "space-between",
-		gap: space.lg,
-		width: "100%",
+		gap: space.xl,
 		maxWidth: layout.wide,
+		height: "3.75rem",
 		marginInline: "auto",
-		paddingBlock: space.lg,
 		paddingInline: space.xl,
-	},
-	brand: {
-		color: color.text,
-		fontFamily: font.mono,
-		fontSize: text.lg,
-		fontWeight: 700,
-		textDecoration: "none",
-		letterSpacing: "-0.02em",
 	},
 	nav: {
 		display: "flex",
-		gap: { default: space.lg, "@media (max-width: 30rem)": space.md },
+		flexGrow: 1,
+		gap: { default: space.lg, "@media (min-width: 40rem)": space.xl },
 	},
-	// 当前页面的链接（路由会给它加上 aria-current="page"）用正文颜色。
 	navLink: {
 		color: {
 			default: color.muted,
@@ -52,17 +80,12 @@ const styles = stylex.create({
 			":is([aria-current=page])": color.text,
 		},
 		fontSize: text.sm,
+		fontWeight: 500,
 		textDecoration: "none",
+		transitionProperty: "color",
+		transitionDuration: "120ms",
 	},
-	main: {
-		flexGrow: 1,
-		minWidth: 0,
-		width: "100%",
-		maxWidth: layout.wide,
-		marginInline: "auto",
-		paddingInline: space.xl,
-		paddingBottom: space["4xl"],
-	},
+	main: { flexGrow: 1, width: "100%", minWidth: 0 },
 	footer: {
 		borderTopWidth: "1px",
 		borderTopStyle: "solid",
@@ -71,52 +94,84 @@ const styles = stylex.create({
 		fontSize: text.sm,
 	},
 	footerInner: {
-		display: "flex",
-		flexWrap: "wrap",
-		justifyContent: "space-between",
-		gap: space.lg,
+		display: "grid",
+		gridTemplateColumns: {
+			default: "minmax(0, 1fr)",
+			"@media (min-width: 48rem)": "1.4fr repeat(3, minmax(0, 1fr))",
+		},
+		gap: space["2xl"],
 		maxWidth: layout.wide,
 		marginInline: "auto",
-		paddingBlock: space.xl,
+		paddingBlock: space["3xl"],
 		paddingInline: space.xl,
 	},
-	footerLinks: { display: "flex", flexWrap: "wrap", gap: space.lg },
-	footerLink: { color: { default: color.subtle, ":hover": color.text } },
+	tagline: { marginBlock: `${space.md} 0`, maxWidth: "18rem" },
+	columnTitle: {
+		marginBlock: `0 ${space.md}`,
+		color: color.text,
+		fontSize: text.sm,
+		fontWeight: 600,
+	},
+	links: {
+		display: "grid",
+		gap: space.sm,
+		margin: 0,
+		padding: 0,
+		listStyle: "none",
+	},
+	link: {
+		color: { default: color.subtle, ":hover": color.text },
+		textDecoration: "none",
+	},
+	signIn: {
+		display: { default: "none", "@media (min-width: 30rem)": "inline-flex" },
+	},
 });
 
 export function Layout(props: ParentProps) {
 	return (
 		<div {...stylex.attrs(styles.shell)}>
 			<header {...stylex.attrs(styles.header)}>
-				<a href="/" {...stylex.attrs(styles.brand)}>
-					smails
-				</a>
-				<nav {...stylex.attrs(styles.nav)}>
-					{NAV.map((item) => (
-						<a href={item.href} {...stylex.attrs(styles.navLink)}>
-							{item.label}
-						</a>
-					))}
-				</nav>
+				<div {...stylex.attrs(styles.headerInner)}>
+					<Logo />
+					<nav aria-label="Main" {...stylex.attrs(styles.nav)}>
+						{NAV.map((item) => (
+							<a href={item.href} {...stylex.attrs(styles.navLink)}>
+								{item.label}
+							</a>
+						))}
+					</nav>
+					<span {...stylex.attrs(styles.signIn)}>
+						<ButtonLink href="/account" variant="outline" small>
+							Account
+						</ButtonLink>
+					</span>
+				</div>
 			</header>
 			<main {...stylex.attrs(styles.main)}>{props.children}</main>
 			<footer {...stylex.attrs(styles.footer)}>
 				<div {...stylex.attrs(styles.footerInner)}>
-					<span>Disposable email for AI agents.</span>
-					<span {...stylex.attrs(styles.footerLinks)}>
-						<a href="https://smail.pw" {...stylex.attrs(styles.footerLink)}>
-							Need an inbox yourself? smail.pw
-						</a>
-						<a href="/privacy" {...stylex.attrs(styles.footerLink)}>
-							Privacy
-						</a>
-						<a
-							href="https://github.com/pexni/smails"
-							{...stylex.attrs(styles.footerLink)}
-						>
-							GitHub
-						</a>
-					</span>
+					<div>
+						<Logo />
+						<p {...stylex.attrs(styles.tagline)}>
+							Disposable email inboxes for AI agents. Receive-only, free to
+							start.
+						</p>
+					</div>
+					{FOOTER.map((column) => (
+						<div>
+							<p {...stylex.attrs(styles.columnTitle)}>{column.title}</p>
+							<ul {...stylex.attrs(styles.links)}>
+								{column.links.map((link) => (
+									<li>
+										<a href={link.href} {...stylex.attrs(styles.link)}>
+											{link.label}
+										</a>
+									</li>
+								))}
+							</ul>
+						</div>
+					))}
 				</div>
 			</footer>
 		</div>

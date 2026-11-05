@@ -11,7 +11,7 @@ export default function CliDocs() {
 	});
 	return (
 		<Article
-			eyebrow="Docs"
+			docs
 			title="CLI"
 			lead="Create disposable inboxes and wait for verification codes from a terminal, a script, or an agent's shell. Requires Node.js 22.18 or newer."
 		>

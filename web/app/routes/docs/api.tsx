@@ -61,7 +61,7 @@ export default function ApiDocs() {
 	});
 	return (
 		<Article
-			eyebrow="Docs"
+			docs
 			title="HTTP API"
 			lead="The same operations the CLI and MCP server use. Every request carries a bearer token."
 		>
