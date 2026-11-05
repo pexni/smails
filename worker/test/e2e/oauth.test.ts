@@ -122,6 +122,7 @@ describe("device login (CLI)", () => {
 			await api(tokens.access_token, "/api/me")
 		).json<any>();
 		expect(me.user.github_login).toBe(login);
+		expect(me.user.email).toBe(`${login.toLowerCase()}@example.com`);
 		expect(me.quota.mailboxes_per_day).toBe(20);
 
 		// 用过的设备码不能再换。
@@ -428,6 +429,7 @@ describe("account page API", () => {
 
 		const account = await (await browser.fetch("/api/web/account")).json<any>();
 		expect(account.user.github_login).toBe(login);
+		expect(account.user.email).toBe(`${login.toLowerCase()}@example.com`);
 		expect(account.quota.mailboxes_per_day).toBe(20);
 		expect(account.sessions).toHaveLength(1);
 		expect(account.sessions[0].client_name).toBe("smails CLI");

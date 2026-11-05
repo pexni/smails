@@ -79,7 +79,7 @@
 
 ### 4.2 我们的角色
 
-同一个 Worker 既是资源服务器，也是授权服务器。用户身份交给 GitHub 来认（上游 IdP），我们只用 GitHub 的 `id`、`login`、`created_at`。**不使用任何第三方 OAuth 库**，全部自己实现，数据存在 D1。
+同一个 Worker 既是资源服务器，也是授权服务器。用户身份交给 GitHub 来认（上游 IdP），我们保存 GitHub 的 `id`、`login`、`created_at` 和**已验证的主邮箱**（登录时申请 `user:email`，读 `/user/emails`）。**不使用任何第三方 OAuth 库**，全部自己实现，数据存在 D1。
 
 ### 4.3 远程 MCP 的登录流程
 

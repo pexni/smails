@@ -38,10 +38,10 @@ function intParam(url: URL, name: string, fallback: number): number {
 
 async function me(env: Env, claims: AccessClaims): Promise<Me> {
 	const user = await env.CORE.prepare(
-		"SELECT id, github_login FROM users WHERE id = ?",
+		"SELECT id, github_login, email FROM users WHERE id = ?",
 	)
 		.bind(claims.sub)
-		.first<{ id: number; github_login: string }>();
+		.first<{ id: number; github_login: string; email: string | null }>();
 	if (!user) {
 		throw new HttpError(401, "invalid_token", "This account no longer exists.");
 	}

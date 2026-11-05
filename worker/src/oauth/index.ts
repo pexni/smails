@@ -83,9 +83,11 @@ async function readForm(request: Request): Promise<URLSearchParams> {
 
 /** 账号页：用户、档位、今日用量、已登录的客户端（还有有效刷新令牌的登录）。 */
 async function account(env: Env, user: WebUser): Promise<Account> {
-	const row = await env.CORE.prepare("SELECT plan FROM users WHERE id = ?")
+	const row = await env.CORE.prepare(
+		"SELECT plan, email FROM users WHERE id = ?",
+	)
 		.bind(user.id)
-		.first<{ plan: string }>();
+		.first<{ plan: string; email: string | null }>();
 	const planName = row?.plan ?? "free";
 	const now = Date.now();
 	const { results } = await env.CORE.prepare(
@@ -107,7 +109,7 @@ async function account(env: Env, user: WebUser): Promise<Account> {
 		})),
 	);
 	return {
-		user,
+		user: { ...user, email: row?.email ?? null },
 		plan: planName,
 		quota: {
 			mailboxes_per_day: planOf(planName).mailboxesPerDay,
@@ -272,6 +274,7 @@ async function devLogin(request: Request, env: Env): Promise<Response> {
 		id: githubId + 1,
 		login,
 		created_at: "2015-01-01T00:00:00Z",
+		email: `${login.toLowerCase()}@example.com`,
 	});
 	return new Response(null, {
 		status: 302,

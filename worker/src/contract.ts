@@ -34,7 +34,7 @@ export type WaitResult = {
 };
 
 export type Me = {
-	user: { id: number; github_login: string };
+	user: { id: number; github_login: string; email: string | null };
 	plan: string;
 	quota: {
 		mailboxes_per_day: number;
@@ -66,7 +66,7 @@ export type OAuthPending = {
 
 /** `/api/web/account`：账号页。 */
 export type Account = {
-	user: { id: number; github_login: string };
+	user: { id: number; github_login: string; email: string | null };
 	plan: string;
 	quota: Me["quota"];
 	/** 已登录的客户端（每次登录一条，刷新令牌轮换不算新的）。 */

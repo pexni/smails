@@ -12,8 +12,11 @@ export default function Privacy() {
 			<H2>Your account</H2>
 			<List>
 				<li>
-					From GitHub we keep your numeric user id, your username and when your
-					account was created. We ask GitHub for no permissions.
+					From GitHub we keep your numeric user id, your username, your verified
+					primary email address and when your GitHub account was created.
+					Sign-in asks GitHub for read access to your email addresses and
+					nothing else. We use the email to contact you about your account; we
+					do not send marketing mail or share it.
 				</li>
 				<li>
 					For each app you sign in to (the CLI, an MCP client), we keep a hash

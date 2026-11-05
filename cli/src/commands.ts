@@ -113,7 +113,7 @@ export async function whoami(flags: Flags): Promise<void> {
 	const me = await api<Me>(serverUrl(), "/api/me");
 	print(
 		flags,
-		`Signed in as ${me.user.github_login} (plan: ${me.plan}). Mailboxes today: ${me.quota.mailboxes_today}/${me.quota.mailboxes_per_day}.`,
+		`Signed in as ${me.user.github_login}${me.user.email ? ` <${me.user.email}>` : ""} (plan: ${me.plan}). Mailboxes today: ${me.quota.mailboxes_today}/${me.quota.mailboxes_per_day}.`,
 		me,
 	);
 }

@@ -7,8 +7,8 @@ import {
 import { cookie, HttpError, readCookie } from "./http.ts";
 import { sessionCookie, type WebUser } from "./session.ts";
 
-// GitHub 只用来确认“你是谁”：网页上跳转到 GitHub 授权，回来后读一次 /user，然后就不再用它的令牌。
-// 不申请任何权限（scope 为空 = 只读公开资料）。
+// GitHub 用来确认“你是谁”：网页上跳转到 GitHub 授权，回来后读一次 /user 和 /user/emails，
+// 然后就不再用它的令牌。只申请 user:email（读邮箱地址），不申请其他权限。
 
 const STATE_COOKIE = "__Host-smails_gh";
 const STATE_PREFIX = "smg1";
@@ -17,7 +17,13 @@ const STATE_MAX_AGE_SECONDS = 10 * 60;
 /** GitHub 账号注册满这么多天才能登录：防止批量养号。 */
 export const MIN_GITHUB_ACCOUNT_AGE_MS = 30 * 24 * 60 * 60 * 1000;
 
-export type GitHubUser = { id: number; login: string; created_at: string };
+export type GitHubUser = {
+	id: number;
+	login: string;
+	created_at: string;
+	/** GitHub 上已验证的主邮箱；没有就是 null。 */
+	email: string | null;
+};
 
 type StateData = { state: string; next: string; exp: number };
 
@@ -64,6 +70,7 @@ export async function startGitHubLogin(
 	authorize.searchParams.set("client_id", env.GITHUB_CLIENT_ID);
 	authorize.searchParams.set("redirect_uri", `${origin}/oauth/github/callback`);
 	authorize.searchParams.set("state", state);
+	authorize.searchParams.set("scope", "user:email");
 	authorize.searchParams.set("allow_signup", "true");
 	return new Response(null, {
 		status: 302,
@@ -108,14 +115,16 @@ export async function fetchGitHubUser(
 			"GitHub did not accept the sign-in. Try again.",
 		);
 	}
-	const response = await fetchImpl("https://api.github.com/user", {
-		headers: {
-			Accept: "application/vnd.github+json",
-			Authorization: `Bearer ${token.access_token}`,
-			"User-Agent": "smails",
-			"X-GitHub-Api-Version": "2022-11-28",
-		},
-	});
+	const headers = {
+		Accept: "application/vnd.github+json",
+		Authorization: `Bearer ${token.access_token}`,
+		"User-Agent": "smails",
+		"X-GitHub-Api-Version": "2022-11-28",
+	};
+	const [response, emailsResponse] = await Promise.all([
+		fetchImpl("https://api.github.com/user", { headers }),
+		fetchImpl("https://api.github.com/user/emails", { headers }),
+	]);
 	const user = (await response
 		.json()
 		.catch(() => null)) as Partial<GitHubUser> | null;
@@ -131,7 +140,22 @@ export async function fetchGitHubUser(
 			"Could not read your GitHub profile. Try again.",
 		);
 	}
-	return { id: user.id, login: user.login, created_at: user.created_at };
+	// 已验证的主邮箱。读不到（用户拒绝了权限之类）也不挡登录，只是先不存。
+	const emails = (await emailsResponse.json().catch(() => null)) as
+		| { email?: unknown; primary?: unknown; verified?: unknown }[]
+		| null;
+	const primary = Array.isArray(emails)
+		? emails.find((entry) => entry.primary === true && entry.verified === true)
+		: undefined;
+	return {
+		id: user.id,
+		login: user.login,
+		created_at: user.created_at,
+		email:
+			emailsResponse.ok && typeof primary?.email === "string"
+				? primary.email.toLowerCase()
+				: null,
+	};
 }
 
 /** 写入或更新用户，返回我们自己的用户。太新的账号、被封禁的账号不让登录。 */
@@ -152,11 +176,13 @@ export async function upsertUser(
 		);
 	}
 	const row = await env.CORE.prepare(
-		`INSERT INTO users (github_id, github_login, github_created_at, created_at) VALUES (?, ?, ?, ?)
-		 ON CONFLICT (github_id) DO UPDATE SET github_login = excluded.github_login
+		`INSERT INTO users (github_id, github_login, github_created_at, email, created_at) VALUES (?, ?, ?, ?, ?)
+		 ON CONFLICT (github_id) DO UPDATE SET
+		   github_login = excluded.github_login,
+		   email = COALESCE(excluded.email, users.email)
 		 RETURNING id, github_login, status`,
 	)
-		.bind(github.id, github.login, createdAt, now)
+		.bind(github.id, github.login, createdAt, github.email, now)
 		.first<{ id: number; github_login: string; status: string }>();
 	if (!row) {
 		throw new Error("users upsert returned nothing");

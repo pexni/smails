@@ -95,6 +95,9 @@ export default function AccountPage() {
 									<Strong>{value()?.user.github_login ?? ""}</Strong> · plan{" "}
 									<Strong>{value()?.plan ?? ""}</Strong>
 								</PanelText>
+								<Show when={value()?.user.email}>
+									{(email) => <PanelText>Email: {email()}</PanelText>}
+								</Show>
 								<PanelText>
 									Mailboxes today:{" "}
 									<Strong>

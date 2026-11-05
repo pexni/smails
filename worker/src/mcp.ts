@@ -254,13 +254,13 @@ function buildServer(
 		() =>
 			run(async () => {
 				const user = await env.CORE.prepare(
-					"SELECT github_login FROM users WHERE id = ?",
+					"SELECT github_login, email FROM users WHERE id = ?",
 				)
 					.bind(claims.sub)
-					.first<{ github_login: string }>();
+					.first<{ github_login: string; email: string | null }>();
 				const plan = planOf(claims.plan);
 				return text(
-					`Signed in as ${user?.github_login ?? "unknown"} (plan: ${claims.plan}). Mailboxes today: ${await usageToday(env, claims.sub)}/${plan.mailboxesPerDay}.`,
+					`Signed in as ${user?.github_login ?? "unknown"}${user?.email ? ` <${user.email}>` : ""} (plan: ${claims.plan}). Mailboxes today: ${await usageToday(env, claims.sub)}/${plan.mailboxesPerDay}.`,
 				);
 			}),
 	);

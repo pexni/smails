@@ -82,7 +82,7 @@ switch (command) {
 	case "users":
 		query(
 			"core",
-			"SELECT id, github_login, plan, status, datetime(created_at / 1000, 'unixepoch') AS joined FROM users ORDER BY id DESC LIMIT 30",
+			"SELECT id, github_login, email, plan, status, datetime(created_at / 1000, 'unixepoch') AS joined FROM users ORDER BY id DESC LIMIT 30",
 		);
 		break;
 	case "stats":
