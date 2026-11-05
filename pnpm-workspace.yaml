@@ -6,3 +6,7 @@ allowBuilds:
   esbuild: true
   workerd: true
   sharp: false
+overrides:
+  # GHSA-g7r4-m6w7-qqqr（esbuild < 0.28.1 在 Windows 上跑开发服务器时可读任意文件）。
+  # esbuild 只是 vite / unplugin 的可选 peer 依赖，0.28 在它们允许的范围内。
+  esbuild: ^0.28.2
