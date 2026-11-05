@@ -4,10 +4,10 @@
 
 ## 0. 合并到 main 之前
 
-- [ ] **⚠ 关掉 Workers Builds 的自动部署。** 现在推送到 `main` 会触发 Cloudflare Workers Builds，它还在用旧的构建命令（进 `frontend/`、用 wrangler），合并后会构建失败。失败时线上仍是旧版本，不会坏，但要在合并前处理：控制台 → Workers → smails → Settings → Builds → 断开仓库。以后像 smail.pw 一样用 `pnpm run deploy` 手动部署。
-- [ ] **建 GitHub OAuth App**（只用来确认身份，不需要任何权限，不用开 Device Flow）：Homepage `https://smails.dev`，回调 `https://smails.dev/oauth/github/callback`。建议建在 `pexni` 组织名下。把 Client ID 和 Client Secret 填进 `worker/.env.production`。
+- [x] **⚠ 关掉 Workers Builds 的自动部署。**（2026-11-05 已删除 `smails` 的构建触发器；原配置是推送 `main` 时在 `worker/` 下执行 `cd ../frontend && pnpm build` 和 `npx wrangler deploy`。） 现在推送到 `main` 会触发 Cloudflare Workers Builds，它还在用旧的构建命令（进 `frontend/`、用 wrangler），合并后会构建失败。失败时线上仍是旧版本，不会坏，但要在合并前处理：控制台 → Workers → smails → Settings → Builds → 断开仓库。以后像 smail.pw 一样用 `pnpm run deploy` 手动部署。
+- [x] **建 GitHub OAuth App**（已建在 `pexni` 组织下，Client ID `Ov23lilxxmQ6hLsZXebt`，Secret 已写进 `.env.production`。只用来确认身份，不需要任何权限，不用开 Device Flow）：Homepage `https://smails.dev`，回调 `https://smails.dev/oauth/github/callback`。建议建在 `pexni` 组织名下。把 Client ID 和 Client Secret 填进 `worker/.env.production`。
 - [x] 线上资源已建好，id 已写进 `site.config.ts`：D1 `smails-core`、`smails-mail`（表结构已经迁移好），R2 `smails-mail`。
-- [x] `worker/.env.production` 已生成，三个签名密钥已随机生成，只差 GitHub 的两项。这个文件不进 git，**另外存一份到密码管理器**：
+- [x] `worker/.env.production` 已生成，5 个密钥都已填好。这个文件不进 git，**另外存一份到密码管理器**：
   - `ADDR_SECRET` 丢了或换了，之前发出去的所有地址都收不到信；
   - `TOKEN_SECRETS` / `SESSION_SECRETS` 换掉会让所有人重新登录（要轮换时在左边加新的、保留旧的）。
 
