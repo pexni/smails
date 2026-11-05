@@ -5,6 +5,7 @@
 //   node d1.mjs stats                    今天和昨天创建的邮箱数、用户数、收信数
 //   node d1.mjs ban <GitHub 用户名>       封禁：刷新令牌时生效，已签发的访问令牌最多再用 1 小时
 //   node d1.mjs unban <GitHub 用户名>
+//   node d1.mjs rejections [小时数]        最近被拒的 OAuth 注册和授权（Workers Logs，默认 24 小时）
 //
 // 除了 migrate，这些命令都直接读写线上的库。写进 SQL 的值都先过校验，所以可以直接拼进语句里。
 import { spawnSync } from "node:child_process";
@@ -107,6 +108,32 @@ switch (command) {
 			`UPDATE users SET status = 'active' WHERE github_login = '${login(rest[0])}'`,
 		);
 		break;
+	case "rejections": {
+		const hours = Number(rest[0] ?? "24");
+		if (!Number.isFinite(hours) || hours <= 0) {
+			fail("Usage: node d1.mjs rejections [hours]");
+		}
+		const to = Date.now();
+		const body = {
+			queryId: "smails-oauth-rejections",
+			timeframe: { from: to - hours * 60 * 60 * 1000, to },
+			view: "events",
+			limit: 100,
+			parameters: {
+				needle: { value: "_rejected" },
+				filters: [
+					{
+						key: "$metadata.service",
+						operation: "eq",
+						type: "string",
+						value: site.worker,
+					},
+				],
+			},
+		};
+		cf(["o11y", "telemetry", "query", "--body", JSON.stringify(body)]);
+		break;
+	}
 	default:
 		fail(
 			"Usage: node d1.mjs migrate | users | stats | ban <login> | unban <login>",
