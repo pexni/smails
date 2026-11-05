@@ -76,7 +76,7 @@ export default function AccountPage() {
 							your account.
 						</PanelText>
 						<Actions>
-							<ButtonLink href={signInHref("/account")}>
+							<ButtonLink rel="external" href={signInHref("/account")}>
 								Continue with GitHub
 							</ButtonLink>
 						</Actions>

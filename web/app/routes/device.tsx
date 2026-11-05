@@ -145,7 +145,7 @@ export default function Device() {
 						</PanelText>
 						<Show when={code()}>{(value) => <BigCode>{value()}</BigCode>}</Show>
 						<Actions>
-							<ButtonLink href={signInHref(here())}>
+							<ButtonLink rel="external" href={signInHref(here())}>
 								Continue with GitHub
 							</ButtonLink>
 						</Actions>

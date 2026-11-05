@@ -54,7 +54,10 @@ export const getPendingAuthorization = () =>
 export const decideAuthorization = (approve: boolean) =>
 	post<{ redirect: string }>("/api/web/oauth/consent", { approve });
 
-/** 去 GitHub 登录，登录后回到当前页面。 */
+/**
+ * 去 GitHub 登录，登录后回到当前页面。这是 Worker 上的接口、不是前端的页面：
+ * 链接上要加 rel="external"，否则路由会在浏览器里接管它，显示 404。
+ */
 export function signInHref(next: string): string {
 	return `/oauth/github/start?next=${encodeURIComponent(next)}`;
 }

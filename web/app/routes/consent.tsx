@@ -85,7 +85,7 @@ export default function Consent() {
 							An app wants to connect to your smails account. Sign in first.
 						</PanelText>
 						<Actions>
-							<ButtonLink href={signInHref("/consent")}>
+							<ButtonLink rel="external" href={signInHref("/consent")}>
 								Continue with GitHub
 							</ButtonLink>
 						</Actions>
