@@ -188,7 +188,6 @@ const styles = stylex.create({
 		height: "6px",
 		borderRadius: radius.full,
 		backgroundColor: color.accent,
-		boxShadow: `0 0 8px ${color.accent}`,
 	},
 	title: {
 		marginBlock: `${space.xl} 0`,
@@ -199,7 +198,7 @@ const styles = stylex.create({
 		textWrap: "balance",
 	},
 	titleAccent: {
-		backgroundImage: `linear-gradient(100deg, ${color.text} 10%, ${color.accent} 95%)`,
+		backgroundImage: `linear-gradient(180deg, ${color.text} 30%, ${color.subtle} 110%)`,
 		backgroundClip: "text",
 		color: "transparent",
 	},

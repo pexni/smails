@@ -4,12 +4,12 @@
 	-moz-osx-font-smoothing: grayscale;
 	-webkit-text-size-adjust: 100%;
 	/* 页面边缘回弹时露出来的底色，和 tokens.stylex.ts 里的 bg 一致。 */
-	background-color: #08090a;
+	background-color: #0a0a0a;
 }
 
 @media (prefers-color-scheme: light) {
 	:root {
-		background-color: #fbfbfa;
+		background-color: #ffffff;
 	}
 }
 
@@ -24,7 +24,7 @@ body {
 }
 
 ::selection {
-	background-color: rgb(180 244 97 / 0.3);
+	background-color: rgb(127 127 127 / 0.35);
 }
 
 @media (prefers-reduced-motion: reduce) {

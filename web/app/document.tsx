@@ -13,12 +13,12 @@ export default function Document(props: ParentProps) {
 				<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 				<meta
 					name="theme-color"
-					content="#08090a"
+					content="#0a0a0a"
 					media="(prefers-color-scheme: dark)"
 				/>
 				<meta
 					name="theme-color"
-					content="#fbfbfa"
+					content="#ffffff"
 					media="(prefers-color-scheme: light)"
 				/>
 				{/* 没有 index.html，StyleX 插件注入不了开发样式表，这里自己接。 */}

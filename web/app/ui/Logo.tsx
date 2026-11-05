@@ -10,16 +10,19 @@ const styles = stylex.create({
 		color: color.text,
 		fontFamily: font.mono,
 		fontSize: text.lg,
-		fontWeight: 700,
-		letterSpacing: "-0.03em",
+		fontWeight: 600,
+		letterSpacing: "-0.04em",
 		textDecoration: "none",
 	},
 	mark: { flexShrink: 0 },
 });
 
-/** 标志：荧光绿圆角方块，里面是信封的轮廓和一个终端光标。和 public/favicon.svg 是同一个图形。 */
+/**
+ * 标志：圆角方框里一个左下角的实心三角，抽象地表示信封的折角。单色，跟着文字颜色走
+ * （深色模式下是白，浅色模式下是黑）。public/favicon.svg 是同一个图形。
+ */
 export function LogoMark(props: { size?: number }) {
-	const size = () => props.size ?? 24;
+	const size = () => props.size ?? 22;
 	return (
 		<svg
 			width={size()}
@@ -28,22 +31,17 @@ export function LogoMark(props: { size?: number }) {
 			aria-hidden="true"
 			{...stylex.attrs(styles.mark)}
 		>
-			<rect width="32" height="32" rx="8" fill="#b4f461" />
-			<path
-				d="M7.5 11.5h17v10.5h-17z"
+			<rect
+				x="2"
+				y="2"
+				width="28"
+				height="28"
+				rx="7"
 				fill="none"
-				stroke="#0b0c0d"
-				stroke-width="2"
-				stroke-linejoin="round"
+				stroke="currentColor"
+				stroke-width="2.5"
 			/>
-			<path
-				d="M7.5 11.5 16 17.5l8.5-6"
-				fill="none"
-				stroke="#0b0c0d"
-				stroke-width="2"
-				stroke-linejoin="round"
-			/>
-			<rect x="21" y="19" width="5" height="2.5" rx="0.5" fill="#0b0c0d" />
+			<path d="M9 9v14h14z" fill="currentColor" />
 		</svg>
 	);
 }

@@ -1,42 +1,39 @@
 import * as stylex from "@stylexjs/stylex";
 
 // 设计变量。组件只引用这里的变量，不写死颜色、间距、圆角。
-// 视觉基调：开发者工具风，深色为主（系统是浅色模式时切到浅色）。
-// 一个荧光绿强调色，只用在关键信息上：验证码、状态点、焦点环、主按钮的光。
+// 视觉基调：纯黑白极简，深色为主（系统是浅色模式时反过来）。没有彩色：
+// 层次靠字号、字重、留白和明暗对比。只有出错提示用红色，那是功能色。
 
 const LIGHT = "@media (prefers-color-scheme: light)";
 
 export const color = stylex.defineVars({
-	bg: { default: "#08090a", [LIGHT]: "#fbfbfa" },
+	bg: { default: "#0a0a0a", [LIGHT]: "#ffffff" },
 	// 卡片、代码块。
-	surface: { default: "#101113", [LIGHT]: "#ffffff" },
+	surface: { default: "#111111", [LIGHT]: "#fafafa" },
 	// 卡片里再抬起来一层（终端标题栏、标签页）。
-	raised: { default: "#16181b", [LIGHT]: "#f3f3f1" },
-	border: { default: "#1f2226", [LIGHT]: "#e6e6e3" },
-	borderStrong: { default: "#2e3238", [LIGHT]: "#cfcfca" },
-	text: { default: "#f4f5f6", [LIGHT]: "#0b0c0d" },
-	muted: { default: "#a1a5ab", [LIGHT]: "#55585d" },
+	raised: { default: "#1a1a1a", [LIGHT]: "#f2f2f2" },
+	border: { default: "#262626", [LIGHT]: "#eaeaea" },
+	borderStrong: { default: "#3a3a3a", [LIGHT]: "#d4d4d4" },
+	text: { default: "#ededed", [LIGHT]: "#0a0a0a" },
+	muted: { default: "#a1a1a1", [LIGHT]: "#525252" },
 	// 最弱的文字；在 bg 和 surface 上都有 4.5:1。
-	subtle: { default: "#7e838a", [LIGHT]: "#6a6d72" },
-	// 强调色：填充用 accent，强调色的文字用 accentText（浅色模式下要更深才有对比度）。
-	accent: { default: "#b4f461", [LIGHT]: "#65a30d" },
-	accentText: { default: "#c5f78a", [LIGHT]: "#3f6212" },
-	onAccent: "#0b0c0d",
+	subtle: { default: "#8f8f8f", [LIGHT]: "#6b6b6b" },
+	// “强调”就是最强的明暗对比：深色模式下是白，浅色模式下是黑。
+	accent: { default: "#ededed", [LIGHT]: "#0a0a0a" },
+	accentText: { default: "#ffffff", [LIGHT]: "#000000" },
+	onAccent: { default: "#0a0a0a", [LIGHT]: "#ffffff" },
 	accentSoft: {
-		default: "rgb(180 244 97 / 0.12)",
-		[LIGHT]: "rgb(101 163 13 / 0.12)",
+		default: "rgb(255 255 255 / 0.08)",
+		[LIGHT]: "rgb(0 0 0 / 0.05)",
 	},
-	// 背景网格的线和 hero 后面的光。
-	grid: { default: "rgb(255 255 255 / 0.045)", [LIGHT]: "rgb(0 0 0 / 0.05)" },
-	glow: {
-		default: "rgb(180 244 97 / 0.16)",
-		[LIGHT]: "rgb(101 163 13 / 0.14)",
-	},
+	// 背景网格的线和 hero 后面的微光（都是中性色）。
+	grid: { default: "rgb(255 255 255 / 0.04)", [LIGHT]: "rgb(0 0 0 / 0.045)" },
+	glow: { default: "rgb(255 255 255 / 0.07)", [LIGHT]: "rgb(0 0 0 / 0.04)" },
 	danger: { default: "#f87171", [LIGHT]: "#b91c1c" },
-	success: { default: "#b4f461", [LIGHT]: "#3f6212" },
-	// 终端里的颜色。
-	termPrompt: { default: "#7dd3fc", [LIGHT]: "#0369a1" },
-	termTool: { default: "#c4b5fd", [LIGHT]: "#6d28d9" },
+	success: { default: "#ededed", [LIGHT]: "#0a0a0a" },
+	// 终端里的颜色：提示符用弱色，工具名用正文色加粗。
+	termPrompt: { default: "#8f8f8f", [LIGHT]: "#6b6b6b" },
+	termTool: { default: "#ededed", [LIGHT]: "#0a0a0a" },
 });
 
 export const space = stylex.defineVars({

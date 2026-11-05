@@ -94,7 +94,6 @@ const styles = stylex.create({
 		height: "6px",
 		borderRadius: radius.full,
 		backgroundColor: color.accent,
-		boxShadow: `0 0 8px ${color.accent}`,
 	},
 	body: {
 		display: "grid",
@@ -117,7 +116,7 @@ const styles = stylex.create({
 	user: { color: color.text },
 	userMark: { color: color.termPrompt, marginInlineEnd: space.sm },
 	tool: { color: color.muted },
-	toolName: { color: color.termTool },
+	toolName: { color: color.termTool, fontWeight: 600 },
 	result: {
 		paddingInlineStart: space.lg,
 		color: color.text,
@@ -161,7 +160,7 @@ const styles = stylex.create({
 		fontWeight: 700,
 		letterSpacing: "0.08em",
 	},
-	done: { color: color.accentText },
+	done: { color: color.text, fontWeight: 600 },
 });
 
 export function AgentDemo() {
