@@ -16,7 +16,11 @@
 		{
 			// 测试里按顺序发请求、等服务器起来，本来就是要测的顺序。
 			"files": ["**/test/**"],
-			"rules": { "no-await-in-loop": "off" }
+			"rules": {
+				"no-await-in-loop": "off",
+				// 测试里的辅助函数放在用到它的 describe 里更好读。
+				"unicorn/consistent-function-scoping": "off"
+			}
 		}
 	],
 	"ignorePatterns": ["**/dist", "**/.cloudflare", "**/.wrangler", "cli"]

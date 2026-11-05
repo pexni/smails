@@ -89,21 +89,21 @@ export function readCookie(request: Request, name: string): string | null {
 	return null;
 }
 
+/**
+ * 我们的 cookie 都用 `__Host-` 前缀：必须 Secure、Path=/、不带 Domain，子域名和别的路径都改不了它。
+ * 浏览器把 http://localhost 当作安全上下文，本地开发也能用。
+ */
 export function cookie(
 	name: string,
 	value: string,
 	maxAgeSeconds: number,
-	secure: boolean,
 ): string {
-	const attributes = [
+	return [
 		`${name}=${encodeURIComponent(value)}`,
 		`Max-Age=${maxAgeSeconds}`,
 		"Path=/",
 		"HttpOnly",
+		"Secure",
 		"SameSite=Lax",
-	];
-	if (secure) {
-		attributes.push("Secure");
-	}
-	return attributes.join("; ");
+	].join("; ");
 }

@@ -28,6 +28,7 @@ export default defineConfig({
 				"/revoke",
 				"/device/code",
 				"/oauth",
+				"/__dev",
 			].map((prefix) => [prefix, { target: "http://localhost:8792" }]),
 		),
 	},

@@ -80,3 +80,76 @@ export async function deliver(
 		{ method: "POST", body: raw },
 	);
 }
+
+/** 很小的 cookie jar：记下 Set-Cookie，后续请求带上。用来模拟一个浏览器。 */
+export class Browser {
+	private readonly cookies = new Map<string, string>();
+
+	async fetch(path: string, init: RequestInit = {}): Promise<Response> {
+		const headers = new Headers(init.headers);
+		if (this.cookies.size > 0) {
+			headers.set(
+				"Cookie",
+				[...this.cookies].map(([name, value]) => `${name}=${value}`).join("; "),
+			);
+		}
+		const response = await fetch(
+			path.startsWith("http") ? path : `${ORIGIN}${path}`,
+			{
+				...init,
+				headers,
+				redirect: "manual",
+			},
+		);
+		for (const line of response.headers.getSetCookie()) {
+			const [pair = "", ...attributes] = line.split(";");
+			const separator = pair.indexOf("=");
+			const name = pair.slice(0, separator).trim();
+			const value = pair.slice(separator + 1).trim();
+			const expired = attributes.some((attribute) =>
+				/max-age=0\b/i.test(attribute.trim()),
+			);
+			if (expired || !value) {
+				this.cookies.delete(name);
+			} else {
+				this.cookies.set(name, value);
+			}
+		}
+		return response;
+	}
+
+	/** 网页上的同源 POST。 */
+	post(path: string, body: unknown, origin = ORIGIN): Promise<Response> {
+		return this.fetch(path, {
+			method: "POST",
+			headers: { "Content-Type": "application/json", Origin: origin },
+			body: JSON.stringify(body),
+		});
+	}
+
+	async signIn(login: string): Promise<void> {
+		const response = await this.fetch(
+			`/__dev/login?login=${login}&next=/account`,
+		);
+		if (response.status !== 302) {
+			throw new Error(`dev login failed: ${response.status}`);
+		}
+	}
+}
+
+export function form(values: Record<string, string>): RequestInit {
+	return {
+		method: "POST",
+		headers: { "Content-Type": "application/x-www-form-urlencoded" },
+		body: new URLSearchParams(values).toString(),
+	};
+}
+
+export async function pkcePair(): Promise<{
+	verifier: string;
+	challenge: string;
+}> {
+	const { toBase64Url, sha256Base64Url } = await import("../src/crypto.ts");
+	const verifier = toBase64Url(crypto.getRandomValues(new Uint8Array(32)));
+	return { verifier, challenge: await sha256Base64Url(verifier) };
+}

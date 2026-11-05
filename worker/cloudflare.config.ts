@@ -30,6 +30,8 @@ export default defineConfig({
 				"/revoke",
 				"/device/code",
 				"/oauth/*",
+				// 只在本地开发时有处理（/__dev/login），线上 Worker 对它回答 404。
+				"/__dev/*",
 			],
 		},
 		observability: {

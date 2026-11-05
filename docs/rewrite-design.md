@@ -113,7 +113,7 @@
 - `POST /device/code` 按 RFC 8628 返回 `device_code`、`user_code`、`verification_uri`、**`verification_uri_complete`**（已经带上代码的链接）、`expires_in`（600 秒）、`interval`（5 秒）。CLI 优先显示带代码的那个链接，点开就能确认。
 - 用户码 8 位，只用不容易混淆的大写字母（不用 0/O、1/I），中间加一个短横线，方便念出来和输入。
 - 确认页上**必须显示用户码**，让用户核对和终端上的一样。只有用户点"确认"才算授权，打开链接本身不算。这样即使有人把别人的链接发给你，也需要你核对、确认以后才生效。
-- 确认页要求同源 POST，带 CSRF 令牌，禁止被嵌进 iframe。
+- 确认页的提交要求同源（校验 `Origin`，会话 cookie 是 `SameSite=Lax`），页面禁止被嵌进 iframe。
 - CLI 轮询时按 RFC 8628 处理 `authorization_pending`、`slow_down`（间隔加 5 秒）、`access_denied`、`expired_token`。
 - 本地 MCP 增加一个 `login` 工具：把带代码的链接返回给 agent，由 agent 转告用户；用户在网页上点确认以后，再调一次 `login` 就完成了，用户不需要自己开终端。
 - 不用 GitHub 自己的 device flow。网页登录、CLI 登录、远程 MCP 都走同一个 GitHub 回调，**三种入口拿到的是同一种令牌**（第 4.5 节）。
@@ -127,7 +127,7 @@
 | 授权码 | 32 字节随机数 | 60 秒，只能用一次 | D1 只存 SHA-256 |
 | 设备码 / 用户码 | 32 字节随机数 / 8 位字母 | 10 分钟 | D1 只存 SHA-256 |
 
-访问令牌的声明：`sub`（用户 id）、`aud`（`https://smails.dev/mcp` 或 `https://smails.dev/api`）、`scope`、`plan`、`cid`（客户端 id）、`iat`、`exp`。
+访问令牌的声明：`sub`（用户 id）、`aud`（`https://smails.dev/mcp` 或 `https://smails.dev/api`；设备授权默认签 `/mcp`，因为本地 MCP 转发给远程 `/mcp`，而 `/api` 两种都接受）、`scope`、`plan`、`cid`（客户端 id）、`iat`、`exp`。
 
 - 档位放在令牌里，所以配额检查不用查用户表。档位变化最多 1 小时后生效（下次刷新时）。
 - 封禁用户：刷新时检查 `users.status`。已经签发的访问令牌最多再用 1 小时。
@@ -249,10 +249,14 @@ CREATE INDEX idx_messages_address_time ON messages (address, received_at DESC);
 | POST | `/register` | DCR |
 | GET | `/authorize` | 授权入口，跳转到 GitHub |
 | GET | `/oauth/github/callback` | GitHub 回调，显示授权确认页 |
-| POST | `/authorize/consent` | 确认页提交（要求同源，带 CSRF 令牌） |
+| GET | `/consent`、`/device` | 授权确认页、Device Login 确认页（前端的静态页面） |
+| GET | `/api/web/session` | 网页上当前登录的用户 |
+| POST | `/api/web/logout` | 退出网页登录 |
+| GET / POST | `/api/web/oauth/pending`、`/api/web/oauth/consent` | 确认页读取待确认的请求、提交"允许"或"拒绝"（要求同源） |
+| GET / POST | `/api/web/device` | Device Login 确认页读取、提交（要求同源） |
+| GET | `/__dev/login` | **只在本地开发时存在**：不经过 GitHub，直接登录一个测试用户。生产构建里整段被去掉 |
 | POST | `/token` | `authorization_code`、`refresh_token`、`device_code` 三种 |
 | POST | `/device/code` | 设备授权的开始 |
-| GET / POST | `/device` | 输入用户码的页面 |
 | POST | `/revoke` | 撤销刷新令牌 |
 
 **邮箱 API**（`Authorization: Bearer <访问令牌>`）
