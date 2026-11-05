@@ -277,6 +277,16 @@ export async function handleMcp(
 	if (request.method === "OPTIONS") {
 		return withCors(new Response(null, { status: 204 }));
 	}
+	// 有人在浏览器里打开 https://smails.dev/mcp：带去文档页。MCP 客户端不会要 text/html。
+	if (
+		request.method === "GET" &&
+		request.headers.get("Accept")?.includes("text/html")
+	) {
+		return new Response(null, {
+			status: 301,
+			headers: { Location: "/docs/mcp" },
+		});
+	}
 	let claims: AccessClaims;
 	try {
 		claims = await authenticate(request, env, {

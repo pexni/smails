@@ -11,7 +11,7 @@ export function protectedResourceMetadata(
 		scopes_supported: [SCOPE],
 		bearer_methods_supported: ["header"],
 		resource_name: "smails",
-		resource_documentation: `${origin}/${resource === "mcp" ? "mcp" : "docs/api"}`,
+		resource_documentation: `${origin}/docs/${resource}`,
 	};
 }
 
@@ -37,6 +37,6 @@ export function authorizationServerMetadata(origin: string) {
 		scopes_supported: [SCOPE],
 		client_id_metadata_document_supported: true,
 		authorization_response_iss_parameter_supported: true,
-		service_documentation: `${origin}/mcp`,
+		service_documentation: `${origin}/docs/mcp`,
 	};
 }

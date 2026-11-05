@@ -64,5 +64,14 @@ export type OAuthPending = {
 	scope: string;
 };
 
+/** `/api/web/account`：账号页。 */
+export type Account = {
+	user: { id: number; github_login: string };
+	plan: string;
+	quota: Me["quota"];
+	/** 已登录的客户端（每次登录一条，刷新令牌轮换不算新的）。 */
+	sessions: { id: string; client_name: string; signed_in_at: number }[];
+};
+
 /** 网页会话 cookie 的名字。 */
 export const SESSION_COOKIE = "__Host-smails_session";

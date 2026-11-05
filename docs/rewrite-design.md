@@ -366,7 +366,7 @@ mail 库里只有第 6.2 节的 `messages` 表。
 **前端（Solid 2 + StyleX 重写，见第 15 节）**
 
 - 首页是面向 agent 的介绍页：远程 MCP 的地址、CLI 的安装和登录、API 示例。醒目的位置写"自己收邮件请用 smail.pw"。
-- 文档页：`/mcp`、`/cli`、`/api`、`/otp`。内容按新接口重写，去掉"不用注册、不要 API key"这类说法。
+- 文档页：`/docs/mcp`、`/docs/cli`、`/docs/api`、`/otp`。`/mcp` 是 MCP 端点，浏览器打开它（`Accept: text/html`）时 301 到 `/docs/mcp`；旧的 `/email-api` 由 `_redirects` 跳到 `/docs/api`。内容按新接口重写，去掉"不用注册、不要 API key"这类说法。
 - 登录相关页面：`/device`（Device Login 确认）、`/authorize`（OAuth 授权确认）、`/account`（档位、今日用量、已登录的客户端、撤销登录）。
 - 隐私说明：我们会保存 GitHub id 和用户名。
 - 删掉现在的收件箱界面、WebSocket hook 和 shadcn 组件。

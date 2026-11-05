@@ -4,9 +4,7 @@
 	"license": "MIT",
 	"type": "module",
 	"imports": {
-		"#/*": "./app/*",
-		"#contract": "../worker/src/contract.ts",
-		"#site": "../site.config.ts"
+		"#/*": "./app/*"
 	},
 	"scripts": {
 		"dev": "vite",

@@ -404,3 +404,74 @@ describe("revocation", () => {
 		expect((await refreshed.json<any>()).error).toBe("invalid_grant");
 	});
 });
+
+describe("account page API", () => {
+	it("lists signed-in apps and only revokes the user's own", async () => {
+		const login = await uniqueLogin("acct");
+		const start = await (
+			await fetch(`${ORIGIN}/device/code`, form({ client_id: "smails-cli" }))
+		).json<any>();
+		const browser = new Browser();
+		await browser.signIn(login);
+		await browser.post("/api/web/device", {
+			user_code: start.user_code,
+			approve: true,
+		});
+		const tokens = await (
+			await postToken({
+				grant_type: "urn:ietf:params:oauth:grant-type:device_code",
+				device_code: start.device_code,
+				client_id: "smails-cli",
+			})
+		).json<any>();
+		expect(tokens.refresh_token).toBeTruthy();
+
+		const account = await (await browser.fetch("/api/web/account")).json<any>();
+		expect(account.user.github_login).toBe(login);
+		expect(account.quota.mailboxes_per_day).toBe(20);
+		expect(account.sessions).toHaveLength(1);
+		expect(account.sessions[0].client_name).toBe("smails CLI");
+
+		// 别人不能撤销这个登录，也看不到它。
+		const stranger = new Browser();
+		await stranger.signIn(await uniqueLogin("other"));
+		expect(
+			(
+				await stranger.post("/api/web/account/revoke", {
+					id: account.sessions[0].id,
+				})
+			).status,
+		).toBe(404);
+		// 跨站请求被拒绝。
+		expect(
+			(
+				await browser.post(
+					"/api/web/account/revoke",
+					{ id: account.sessions[0].id },
+					"https://evil.example",
+				)
+			).status,
+		).toBe(403);
+
+		expect(
+			(
+				await browser.post("/api/web/account/revoke", {
+					id: account.sessions[0].id,
+				})
+			).status,
+		).toBe(200);
+		expect(
+			(await (await browser.fetch("/api/web/account")).json<any>()).sessions,
+		).toHaveLength(0);
+		const refreshed = await postToken({
+			grant_type: "refresh_token",
+			refresh_token: tokens.refresh_token,
+			client_id: "smails-cli",
+		});
+		expect((await refreshed.json<any>()).error).toBe("invalid_grant");
+	});
+
+	it("requires a session", async () => {
+		expect((await new Browser().fetch("/api/web/account")).status).toBe(401);
+	});
+});

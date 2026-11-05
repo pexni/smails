@@ -9,6 +9,7 @@ import { prerender } from "prerender-crawler/vite";
 import { defineConfig } from "vite";
 
 import { site } from "../site.config.ts";
+import { notFoundPage } from "./vite/not-found-page.ts";
 
 // 这个项目只产出静态网站（dist/client）。接口、OAuth、MCP 和收信在 ../worker 里，
 // 部署时 Worker 把这里的产物当静态文件带上。
@@ -59,6 +60,7 @@ export default defineConfig({
 			// /mcp 写成 mcp.html。
 			autoSubfolderIndex: false,
 			integrations: [
+				notFoundPage("smails"),
 				sitemap({ hostname: `https://${site.domain}` }),
 				{
 					// 构建清单只在构建时有用，不该作为静态文件发布出去。

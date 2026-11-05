@@ -1,3 +1,4 @@
+import { Layout } from "#/components/layout.tsx";
 import { Router } from "#/router.ts";
 
 import "./global.css";
@@ -20,5 +21,5 @@ if (typeof window !== "undefined") {
 }
 
 export default function App() {
-	return <Router>{(props) => <main>{props.children}</main>}</Router>;
+	return <Router>{(props) => <Layout>{props.children}</Layout>}</Router>;
 }

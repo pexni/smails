@@ -3,7 +3,17 @@ import { announcePages } from "prerender-crawler/announce";
 
 // 全站页面清单。预渲染的爬虫从首页出发顺着链接找页面，这里把清单直接告诉它，
 // 免得哪个页面没有被链接到就漏掉。
-export const PAGE_PATHS = ["/"];
+export const PAGE_PATHS = [
+	"/",
+	"/docs/mcp",
+	"/docs/cli",
+	"/docs/api",
+	"/otp",
+	"/privacy",
+	"/device",
+	"/consent",
+	"/account",
+];
 
 /**
  * 只在构建时（和本地开发时）运行：网站上线后是纯静态文件，没有这一层。

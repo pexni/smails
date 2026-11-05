@@ -1,4 +1,4 @@
-import type { OAuthPending, WebSession } from "../contract.ts";
+import type { Account, OAuthPending, WebSession } from "../contract.ts";
 import {
 	finishGitHubLogin,
 	safeNext,
@@ -6,6 +6,8 @@ import {
 	upsertUser,
 } from "../github.ts";
 import { assertSameOrigin, HttpError, json, readJson } from "../http.ts";
+import { usageToday } from "../mailboxes.ts";
+import { planOf, utcDay } from "../plans.ts";
 import {
 	clearSessionCookie,
 	readSession,
@@ -26,7 +28,7 @@ import {
 	startDeviceAuthorization,
 } from "./device.ts";
 import { OAuthError, oauthErrorResponse } from "./errors.ts";
-import { revokeRefreshToken } from "./grants.ts";
+import { revokeFamily, revokeRefreshToken } from "./grants.ts";
 import {
 	authorizationServerMetadata,
 	protectedResourceMetadata,
@@ -77,6 +79,43 @@ async function readForm(request: Request): Promise<URLSearchParams> {
 		);
 	}
 	throw new OAuthError(400, "invalid_request", "Send the request as a form.");
+}
+
+/** 账号页：用户、档位、今日用量、已登录的客户端（还有有效刷新令牌的登录）。 */
+async function account(env: Env, user: WebUser): Promise<Account> {
+	const row = await env.CORE.prepare("SELECT plan FROM users WHERE id = ?")
+		.bind(user.id)
+		.first<{ plan: string }>();
+	const planName = row?.plan ?? "free";
+	const now = Date.now();
+	const { results } = await env.CORE.prepare(
+		`SELECT family_id, client_id, MIN(created_at) AS signed_in_at FROM refresh_tokens
+		 WHERE user_id = ? GROUP BY family_id
+		 HAVING SUM(CASE WHEN revoked_at IS NULL AND rotated_at IS NULL AND expires_at > ? THEN 1 ELSE 0 END) > 0
+		 ORDER BY signed_in_at DESC LIMIT 50`,
+	)
+		.bind(user.id, now)
+		.all<{ family_id: string; client_id: string; signed_in_at: number }>();
+	const sessions = await Promise.all(
+		results.map(async (session) => ({
+			id: session.family_id,
+			client_name: await resolveClient(env, session.client_id).then(
+				(client) => client.name,
+				() => session.client_id,
+			),
+			signed_in_at: session.signed_in_at,
+		})),
+	);
+	return {
+		user,
+		plan: planName,
+		quota: {
+			mailboxes_per_day: planOf(planName).mailboxesPerDay,
+			mailboxes_today: await usageToday(env, user.id, now),
+			resets_at: utcDay(now).resetsAt,
+		},
+		sessions,
+	};
 }
 
 async function requireWebUser(request: Request, env: Env): Promise<WebUser> {
@@ -153,6 +192,29 @@ async function webEndpoint(
 	if (method === "POST" && pathname === "/api/web/logout") {
 		assertSameOrigin(request);
 		return json({ ok: true }, 200, { "Set-Cookie": clearSessionCookie() });
+	}
+
+	if (method === "GET" && pathname === "/api/web/account") {
+		return json(await account(env, await requireWebUser(request, env)));
+	}
+	if (method === "POST" && pathname === "/api/web/account/revoke") {
+		assertSameOrigin(request);
+		const user = await requireWebUser(request, env);
+		const { id } = await readJson(request);
+		if (typeof id !== "string") {
+			throw new HttpError(400, "invalid_request", "id is required.");
+		}
+		// 只能撤销自己的登录。
+		const owned = await env.CORE.prepare(
+			"SELECT 1 FROM refresh_tokens WHERE family_id = ? AND user_id = ? LIMIT 1",
+		)
+			.bind(id, user.id)
+			.first();
+		if (!owned) {
+			throw new HttpError(404, "not_found", "No such session.");
+		}
+		await revokeFamily(env, id);
+		return json({ ok: true });
 	}
 
 	if (method === "GET" && pathname === "/api/web/oauth/pending") {
