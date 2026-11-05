@@ -10,10 +10,23 @@ Looking for a throwaway inbox for yourself, in the browser? Use **[smail.pw](htt
 
 ## Use it
 
-**Remote MCP** — add `https://smails.dev/mcp` to your MCP client. It opens a browser window once to sign in with GitHub.
+**Fastest** — paste this into Claude Code or Codex. The agent reads [setup.md](https://smails.dev/setup.md), adds the server, and tells you when to sign in with GitHub:
+
+```
+Set up smails for me by following https://smails.dev/setup.md
+```
+
+**Claude Code** — then run `/mcp` to sign in:
 
 ```bash
-claude mcp add --transport http smails https://smails.dev/mcp
+claude mcp add --transport http --scope user smails https://smails.dev/mcp
+```
+
+**Codex**
+
+```bash
+codex mcp add smails --url https://smails.dev/mcp
+codex mcp login smails
 ```
 
 **CLI**
@@ -23,8 +36,6 @@ npx @smails/cli login                 # once: confirm in the browser
 npx @smails/cli create                # → brave-otter-k3j9x2m8@smails.dev
 npx @smails/cli wait --subject code   # blocks until the email arrives, prints it
 ```
-
-**Local MCP (stdio)** — `{ "command": "npx", "args": ["-y", "@smails/cli", "mcp"] }`
 
 Docs: [MCP](https://smails.dev/docs/mcp) · [CLI](https://smails.dev/docs/cli) · [HTTP API](https://smails.dev/docs/api)
 

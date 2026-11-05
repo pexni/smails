@@ -23,9 +23,9 @@
   ```
 
 - [ ] 在浏览器里先登录一个测试用户：`http://localhost:8792/__dev/login?login=you&next=/account`
-- [ ] 把 `http://localhost:8792/mcp` 加到几个常用的客户端里，让它们各自走一遍授权（弹出的确认页上点 Allow），再调用 `create_mailbox`：
+- [ ] 把 `http://localhost:8792/mcp` 加到 Claude Code 和 Codex 里，让它们各自走一遍授权（弹出的确认页上点 Allow），再调用 `create_mailbox`：
   - Claude Code：`claude mcp add --transport http smails-local http://localhost:8792/mcp`
-  - Cursor、VS Code 等
+  - Codex：`codex mcp add smails-local --url http://localhost:8792/mcp`，再 `codex mcp login smails-local`
   - 顺便核对 `/docs/mcp` 上各客户端的配置写法和实际操作是否一致。
 - [ ] 模拟收信，确认 `wait_for_message` 能收到：
 

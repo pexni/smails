@@ -4,6 +4,7 @@ import { createSignal } from "solid-js";
 
 import { AgentDemo } from "#/components/agent-demo.tsx";
 import { type CodeTab, CodeTabs } from "#/components/code-tabs.tsx";
+import { SETUP_PROMPT } from "#/setup.ts";
 import { ButtonLink } from "#/ui/Button.tsx";
 import {
 	color,
@@ -15,38 +16,37 @@ import {
 } from "#/ui/tokens.stylex.ts";
 import { usePageHead } from "#/utils/head.ts";
 
-const INSTALL = "npx @smails/cli login";
-
 const CONNECT: CodeTab[] = [
 	{
-		id: "mcp",
-		label: "Remote MCP",
+		id: "agent",
+		label: "Ask your agent",
 		caption:
-			"Add the server to your MCP client. It opens a browser window once to sign in with GitHub.",
-		code: `# Claude Code
-claude mcp add --transport http smails https://smails.dev/mcp
-
-# Cursor, VS Code, Claude and other clients: add this URL
-https://smails.dev/mcp`,
+			"Paste this into Claude Code or Codex. The agent adds the server itself; you only sign in with GitHub when it asks.",
+		code: SETUP_PROMPT,
+	},
+	{
+		id: "claude",
+		label: "Claude Code",
+		caption:
+			"Add the server, then run /mcp inside Claude Code to sign in with GitHub.",
+		code: "claude mcp add --transport http --scope user smails https://smails.dev/mcp",
+	},
+	{
+		id: "codex",
+		label: "Codex",
+		caption:
+			"Add the server, then sign in with GitHub in the browser window that opens.",
+		code: `codex mcp add smails --url https://smails.dev/mcp
+codex mcp login smails`,
 	},
 	{
 		id: "cli",
 		label: "CLI",
 		caption:
-			"Sign in once, then create inboxes and wait for codes from any shell or script.",
+			"From any shell or script: sign in once, then create inboxes and wait for codes.",
 		code: `npx @smails/cli login                 # confirm in the browser
 npx @smails/cli create                # → brave-otter-k3j9x2m8@smails.dev
 npx @smails/cli wait --subject code   # blocks until the email arrives`,
-	},
-	{
-		id: "http",
-		label: "HTTP",
-		caption: "One request waits for the next email — no polling loop.",
-		code: `curl -X POST https://smails.dev/api/mailboxes \\
-  -H "Authorization: Bearer $TOKEN"
-
-curl "https://smails.dev/api/mailboxes/$ADDRESS/wait?subject=code" \\
-  -H "Authorization: Bearer $TOKEN"`,
 	},
 ];
 
@@ -113,13 +113,7 @@ const STEPS = [
 	},
 ];
 
-const CLIENTS = [
-	"Claude Code",
-	"Claude",
-	"Cursor",
-	"VS Code",
-	"Any MCP client",
-];
+const CLIENTS = ["Claude Code", "Codex"];
 
 const styles = stylex.create({
 	// —— hero ——
@@ -216,11 +210,18 @@ const styles = stylex.create({
 		gap: space.md,
 		marginTop: space["2xl"],
 	},
+	installLabel: {
+		margin: `${space.xl} 0 ${space.sm}`,
+		color: color.subtle,
+		fontSize: text.sm,
+	},
 	install: {
 		display: "inline-flex",
 		alignItems: "center",
 		gap: space.md,
-		marginTop: space.xl,
+		maxWidth: "100%",
+		textAlign: "start",
+		lineHeight: 1.5,
 		paddingBlock: space.sm,
 		paddingInline: space.md,
 		borderWidth: "1px",
@@ -414,24 +415,29 @@ const styles = stylex.create({
 function InstallChip() {
 	const [copied, setCopied] = createSignal(false);
 	const copy = async () => {
-		await navigator.clipboard.writeText(INSTALL);
+		await navigator.clipboard.writeText(SETUP_PROMPT);
 		setCopied(true);
 		setTimeout(() => setCopied(false), 1500);
 	};
 	return (
-		<button
-			type="button"
-			onClick={() => void copy()}
-			{...stylex.attrs(styles.install)}
-		>
-			<span>
-				<span {...stylex.attrs(styles.dollar)}>$ </span>
-				{INSTALL}
-			</span>
-			<span {...stylex.attrs(styles.copyHint)}>
-				{copied() ? "Copied" : "Copy"}
-			</span>
-		</button>
+		<>
+			<p {...stylex.attrs(styles.installLabel)}>
+				Or paste this into Claude Code or Codex:
+			</p>
+			<button
+				type="button"
+				onClick={() => void copy()}
+				{...stylex.attrs(styles.install)}
+			>
+				<span>
+					<span {...stylex.attrs(styles.dollar)}>› </span>
+					{SETUP_PROMPT}
+				</span>
+				<span {...stylex.attrs(styles.copyHint)}>
+					{copied() ? "Copied" : "Copy"}
+				</span>
+			</button>
+		</>
 	);
 }
 
@@ -505,8 +511,9 @@ export default function Home() {
 							Up and running in a minute.
 						</h2>
 						<p {...stylex.attrs(styles.splitText)}>
-							Point any MCP client at the remote server, or use the CLI from a
-							shell. Both sign in once with GitHub and share the same tools.
+							Paste one sentence into Claude Code or Codex and the agent sets
+							itself up, or use the CLI from a shell. Both sign in once with
+							GitHub and share the same tools.
 						</p>
 					</div>
 					<CodeTabs tabs={CONNECT} />

@@ -1,4 +1,5 @@
-import { Article, H2, H3, Link, List, Note, P } from "#/components/prose.tsx";
+import { Article, H2, Link, List, Note, P } from "#/components/prose.tsx";
+import { SETUP_PROMPT } from "#/setup.ts";
 import { CodeBlock, InlineCode } from "#/ui/Code.tsx";
 import { usePageHead } from "#/utils/head.ts";
 
@@ -23,63 +24,57 @@ const TOOLS: [string, string][] = [
 
 export default function McpDocs() {
 	usePageHead({
-		title:
-			"smails MCP server — disposable email for Claude, Cursor and other agents",
+		title: "smails MCP server — disposable email for Claude Code and Codex",
 		description:
-			"Connect the smails MCP server to Claude, Cursor, VS Code or any MCP client. Your agent creates disposable inboxes and waits for verification codes. Remote server with OAuth, or local over stdio.",
+			"Connect the smails MCP server to Claude Code or Codex. Your agent creates disposable inboxes and waits for verification codes. Remote server with OAuth, or local over stdio.",
 	});
 	return (
 		<Article
 			docs
 			title="MCP server"
-			lead="Let your agent create inboxes and wait for verification emails. Use the remote server (sign in with GitHub when your client asks), or run it locally over stdio."
+			lead="Let your agent create inboxes and wait for verification emails. Add the remote server to Claude Code or Codex and sign in with GitHub once."
 		>
-			<H2>Remote server (recommended)</H2>
-			<P>Add this URL as a remote (Streamable HTTP) MCP server:</P>
-			<CodeBlock label="MCP server URL" code="https://smails.dev/mcp" />
+			<H2>Fastest: ask your agent</H2>
 			<P>
-				The first time your client connects, it opens a browser window: sign in
-				with GitHub and click <strong>Allow</strong>. The client keeps the
-				session from then on.
+				Paste this into Claude Code or Codex. The agent reads the setup
+				instructions, adds the server and tells you when to sign in.
 			</P>
-			<H3>Claude Code</H3>
+			<CodeBlock label="prompt" code={SETUP_PROMPT} />
+
+			<H2>Claude Code</H2>
 			<CodeBlock
 				label="terminal"
 				code="claude mcp add --transport http smails https://smails.dev/mcp"
 			/>
-			<H3>Cursor</H3>
+			<P>
+				Then run <InlineCode>/mcp</InlineCode> inside Claude Code, pick{" "}
+				<strong>smails</strong> and sign in with GitHub in the browser window
+				that opens. Add <InlineCode>--scope user</InlineCode> to make it
+				available in every project.
+			</P>
+
+			<H2>Codex</H2>
 			<CodeBlock
-				label="~/.cursor/mcp.json"
-				code={`{
-  "mcpServers": {
-    "smails": { "url": "https://smails.dev/mcp" }
-  }
-}`}
+				label="terminal"
+				code={`codex mcp add smails --url https://smails.dev/mcp
+codex mcp login smails`}
 			/>
-			<H3>VS Code</H3>
-			<CodeBlock
-				label=".vscode/mcp.json"
-				code={`{
-  "servers": {
-    "smails": { "type": "http", "url": "https://smails.dev/mcp" }
-  }
-}`}
-			/>
-			<H3>Claude (desktop and web)</H3>
-			<P>Add a custom connector and paste the server URL above.</P>
+			<P>
+				<InlineCode>codex mcp login</InlineCode> opens a browser window to sign
+				in with GitHub. On a machine without a browser, add{" "}
+				<InlineCode>--no-browser</InlineCode> and paste the redirect URL back
+				into the terminal.
+			</P>
 
 			<H2>Local server (stdio)</H2>
 			<P>
-				For clients that only run local servers. It forwards to the same remote
-				tools, so both behave identically.
+				If you prefer a local process, the CLI runs the same tools over stdio
+				(it forwards to the remote server).
 			</P>
 			<CodeBlock
-				label="mcp.json"
-				code={`{
-  "mcpServers": {
-    "smails": { "command": "npx", "args": ["-y", "@smails/cli", "mcp"] }
-  }
-}`}
+				label="terminal"
+				code={`claude mcp add smails -- npx -y @smails/cli mcp      # Claude Code
+codex mcp add smails -- npx -y @smails/cli mcp       # Codex`}
 			/>
 			<P>
 				Sign in once: run <InlineCode>npx @smails/cli login</InlineCode> in a

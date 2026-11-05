@@ -24,7 +24,7 @@ import { Button, ButtonLink } from "#/ui/Button.tsx";
 import { useClientData } from "#/utils/client-data.ts";
 import { usePageHead } from "#/utils/head.ts";
 
-// OAuth 授权确认页：远程 MCP 客户端（Claude、Cursor……）发起 /authorize 后来到这里。
+// OAuth 授权确认页：远程 MCP 客户端（Claude Code、Codex）发起 /authorize 后来到这里。
 // 页面醒目地显示客户端名字和它要跳回的主机，用户据此判断是不是自己在用的那个客户端。
 // 所有客户端共用我们一个 GitHub 应用，所以这一页不能省：不然恶意客户端能借着用户已登录的状态悄悄拿到令牌。
 
