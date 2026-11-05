@@ -8,3 +8,7 @@ dist/
 .wrangler/
 .cloudflare/
 .mf/
+
+# 本地的 agent 工具（/skills 安装到项目里的 skill），和项目无关，不提交。
+.agents/
+skills-lock.json
