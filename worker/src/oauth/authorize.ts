@@ -69,11 +69,30 @@ export async function startAuthorization(
 		client = await resolveClient(env, clientId, { now });
 	} catch (error) {
 		if (error instanceof OAuthError) {
+			console.warn(
+				JSON.stringify({
+					event: "authorize_rejected",
+					reason: error.message,
+					client_id: clientId,
+					redirect_uri: redirectUri,
+					user_agent: request.headers.get("User-Agent"),
+				}),
+			);
 			throw new HttpError(400, error.error, error.message);
 		}
 		throw error;
 	}
 	if (!redirectUriMatches(client.redirect_uris, redirectUri)) {
+		console.warn(
+			JSON.stringify({
+				event: "authorize_rejected",
+				reason: "redirect_uri mismatch",
+				client_id: clientId,
+				client_name: client.name,
+				redirect_uri: redirectUri,
+				registered: client.redirect_uris,
+			}),
+		);
 		throw new HttpError(
 			400,
 			"invalid_request",

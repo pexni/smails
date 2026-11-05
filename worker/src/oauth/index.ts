@@ -164,7 +164,27 @@ async function oauthEndpoint(
 		);
 	}
 	if (method === "POST" && pathname === "/register") {
-		return json(await registerClient(env, await readJson(request)), 201);
+		const body = await readJson(request);
+		try {
+			return json(await registerClient(env, body), 201);
+		} catch (error) {
+			// 记下被拒的注册：哪个客户端、它要什么，用来判断要不要支持它（比如机密客户端）。
+			if (error instanceof OAuthError) {
+				console.warn(
+					JSON.stringify({
+						event: "register_rejected",
+						error: error.error,
+						reason: error.message,
+						client_name: body.client_name,
+						redirect_uris: body.redirect_uris,
+						token_endpoint_auth_method: body.token_endpoint_auth_method,
+						grant_types: body.grant_types,
+						user_agent: request.headers.get("User-Agent"),
+					}),
+				);
+			}
+			throw error;
+		}
 	}
 	if (method === "POST" && pathname === "/revoke") {
 		const token = (await readForm(request)).get("token");

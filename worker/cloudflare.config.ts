@@ -33,8 +33,9 @@ export default defineConfig({
 			],
 		},
 		observability: {
-			// 只写 enabled: false 时，每次调用仍会记一条调用日志（invocationLogs 默认开），要单独关。
-			logs: { enabled: false, invocationLogs: false },
+			// 只记代码里主动写的日志（OAuth 注册、授权被拒的原因，见 src/oauth/），不记每次调用：
+			// 发往旧地址的邮件一天就有几十万次调用，全记既没用又会超出免费额度。
+			logs: { enabled: true, invocationLogs: false, persist: true },
 			traces: { enabled: false },
 			issues: { enabled: true },
 		},
