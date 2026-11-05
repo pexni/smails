@@ -91,7 +91,6 @@ Two independent tracks.
 ```bash
 cd worker
 pnpm run deploy            # build web + worker, apply D1 migrations, cf deploy
-pnpm run deploy:staging    # same build as <name>-staging on workers.dev
 ```
 
 **CLI (`@smails/cli`) + MCP registry listing** — bump `cli/package.json`, push, then `gh release create cli-vX.Y.Z --target main`. The release triggers `.github/workflows/publish-cli.yml` (npm with provenance, then the MCP registry from `server.json`; its `description` must stay ≤ 100 characters).

@@ -5,37 +5,34 @@
 ## 0. 合并到 main 之前
 
 - [ ] **⚠ 关掉 Workers Builds 的自动部署。** 现在推送到 `main` 会触发 Cloudflare Workers Builds，它还在用旧的构建命令（进 `frontend/`、用 wrangler），合并后会构建失败。失败时线上仍是旧版本，不会坏，但要在合并前处理：控制台 → Workers → smails → Settings → Builds → 断开仓库。以后像 smail.pw 一样用 `pnpm run deploy` 手动部署。
-- [ ] **建 GitHub OAuth App**（只用来确认身份，不需要任何权限，不用开 Device Flow）：
-  - 正式：Homepage `https://smails.dev`，回调 `https://smails.dev/oauth/github/callback`。建议建在 `pexni` 组织名下。
-  - staging：回调 `https://smails-staging.<你的子域名>.workers.dev/oauth/github/callback`。
-- [ ] **建线上资源**，把返回的 id 填进根目录的 `site.config.ts` 并提交：
-
-  ```bash
-  pnpm exec cf d1 create --name smails-core
-  pnpm exec cf d1 create --name smails-mail
-  pnpm exec cf r2 buckets create --name smails-mail
-  ```
-
-- [ ] **准备密钥**：`cp .env.example .env.production`，填上正式 GitHub App 的 `GITHUB_CLIENT_ID` / `GITHUB_CLIENT_SECRET`，三个签名密钥各用 `openssl rand -base64 32` 生成。staging 另做一份 `.env.staging`（GitHub 用 staging 的 App）。这两个文件不进 git，**另外存一份到密码管理器**：
+- [ ] **建 GitHub OAuth App**（只用来确认身份，不需要任何权限，不用开 Device Flow）：Homepage `https://smails.dev`，回调 `https://smails.dev/oauth/github/callback`。建议建在 `pexni` 组织名下。把 Client ID 和 Client Secret 填进 `worker/.env.production`。
+- [x] 线上资源已建好，id 已写进 `site.config.ts`：D1 `smails-core`、`smails-mail`（表结构已经迁移好），R2 `smails-mail`。
+- [x] `worker/.env.production` 已生成，三个签名密钥已随机生成，只差 GitHub 的两项。这个文件不进 git，**另外存一份到密码管理器**：
   - `ADDR_SECRET` 丢了或换了，之前发出去的所有地址都收不到信；
   - `TOKEN_SECRETS` / `SESSION_SECRETS` 换掉会让所有人重新登录（要轮换时在左边加新的、保留旧的）。
 
-## 1. staging
+## 1. 本地用真实的 MCP 客户端测一遍
 
-- [ ] 第一次部署（带密钥）：
+没有 staging 环境：本地开发服务器跑的是真实的 workerd，`/mcp`、OAuth、确认页都在本地，用 `/__dev/login` 登录就不需要 GitHub App。
+
+- [ ] 起本地服务：
 
   ```bash
-  pnpm --filter smails-web run build && pnpm exec vite build --mode staging
-  pnpm run migrate
-  pnpm exec cf deploy --prebuilt --mode staging --secrets-file .env.staging
+  pnpm --filter smails-web run build
+  pnpm --filter smails-worker run dev        # http://localhost:8792
   ```
 
-  以后用 `pnpm run deploy:staging`。staging 和正式环境共用 D1 和 R2，不绑域名、不收信。
-- [ ] 用真实的客户端走一遍登录和工具调用（这几家客户端的 OAuth 支持各不相同，这一步是为了确认它们都能连上）：
-  - Claude Code：`claude mcp add --transport http smails-staging https://smails-staging.<子域名>.workers.dev/mcp`
-  - Cursor、VS Code、Claude（桌面或网页版的自定义连接器）
-  - CLI：`SMAILS_URL=https://smails-staging.<子域名>.workers.dev node ../cli/dist/index.js login`
-  - 顺便核对 `/docs/mcp` 页面上各个客户端的配置写法，和实际操作是否一致。
+- [ ] 在浏览器里先登录一个测试用户：`http://localhost:8792/__dev/login?login=you&next=/account`
+- [ ] 把 `http://localhost:8792/mcp` 加到几个常用的客户端里，让它们各自走一遍授权（弹出的确认页上点 Allow），再调用 `create_mailbox`：
+  - Claude Code：`claude mcp add --transport http smails-local http://localhost:8792/mcp`
+  - Cursor、VS Code 等
+  - 顺便核对 `/docs/mcp` 上各客户端的配置写法和实际操作是否一致。
+- [ ] 模拟收信，确认 `wait_for_message` 能收到：
+
+  ```bash
+  printf 'From: a@example.com\r\nTo: <地址>\r\nSubject: Your code\r\nMessage-ID: <1@example.com>\r\n\r\nCode 123456\r\n' \
+    | curl -X POST "http://localhost:8792/cdn-cgi/local/email?from=a@example.com&to=<地址>" --data-binary @-
+  ```
 
 ## 2. 正式部署
 
@@ -78,6 +75,6 @@ worker 先上线，再发 CLI：CLI 0.1 只能连新的服务器。
 
 ## 回滚
 
-- 用了 `exports` 部署之后，就不能再回到旧的 `migrations` 写法；而且版本之间如果 DO 的 namespace 不一样，Cloudflare 可能不允许直接回滚到旧版本。所以**回滚到重写之前的旧版本不一定能做到**，这正是要先在 staging 上把流程跑通的原因。
+- 用了 `exports` 部署之后，就不能再回到旧的 `migrations` 写法；而且版本之间如果 DO 的 namespace 不一样，Cloudflare 可能不允许直接回滚到旧版本。所以**回滚到重写之前的旧版本不一定能做到**，这正是要先在本地用真实客户端把流程跑通（第 1 步）的原因。
 - 新版本之间的回滚：`pnpm exec cf workers versions list` 找到版本，再 `pnpm exec cf workers deployments create` 把流量切回去。
 - 新建的 D1 库和 R2 桶对旧版本没有影响；旧的 DO 数据在新版本上线后只会被 alarm 逐步删除，删掉的部分回滚也找不回来。

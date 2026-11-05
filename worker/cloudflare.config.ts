@@ -6,16 +6,14 @@ import { site } from "../site.config.ts";
 import * as entrypoint from "./src/index.ts" with { type: "cf-worker" };
 
 export default defineConfig({
-	// --mode staging 部署成另一个名字的 Worker（名字后面加 -staging）：只有 workers.dev 的地址，
-	// 不绑域名、不接收邮件，数据库和存储与正式环境共用。用来在上线前拿真实的 MCP 客户端测登录。
-	worker: ({ mode }) => ({
-		name: mode === "staging" ? `${site.worker}-staging` : site.worker,
+	// 没有 staging 环境：上线前用本地开发服务器（真实的 workerd）加真实的 MCP 客户端测试。
+	worker: {
+		name: site.worker,
 		entrypoint,
 		compatibilityDate: "2026-11-01",
-		triggers:
-			mode === "staging"
-				? []
-				: [triggers.fetch({ pattern: `${site.domain}/*`, zone: site.domain })],
+		triggers: [
+			triggers.fetch({ pattern: `${site.domain}/*`, zone: site.domain }),
+		],
 		// 静态文件是前端的构建产物（../web/dist/client），由 vite.config.ts 的 publicDir 带进来。
 		// 页面都由静态资源直接返回；只有下面这些路径才进 Worker。
 		assets: {
@@ -71,5 +69,5 @@ export default defineConfig({
 			// 旧版每个邮箱一个的 DO。只剩 alarm 清理数据，旧数据清空后改成 state: "deleted"。
 			Mailbox: exports.durableObject({ storage: "sqlite" }),
 		},
-	}),
+	},
 });

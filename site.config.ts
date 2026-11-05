@@ -8,10 +8,10 @@ export const site = {
 	// Worker 的名字。
 	worker: "smails",
 	// D1：core 存用户、OAuth 客户端、令牌、邮箱和配额；mail 只存邮件元数据。
-	// 线上的库还没建，建好后把 `cf d1 create` 返回的 id 填进来。
+	// 用 `cf d1 create --name <名字>` 创建，id 是它返回的 uuid。
 	databases: {
-		core: { name: "smails-core", id: "" },
-		mail: { name: "smails-mail", id: "" },
+		core: { name: "smails-core", id: "064b522f-7651-40dd-94d5-fb7c113b1454" },
+		mail: { name: "smails-mail", id: "33b5c7c9-19f6-44a9-8954-1d8fcf5f2255" },
 	},
 	// R2：邮件原文，对象 key 是邮件 id。
 	bucket: "smails-mail",

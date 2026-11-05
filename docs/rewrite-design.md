@@ -387,7 +387,7 @@ mail 库里只有第 6.2 节的 `messages` 表。
 
 1. **准备工作（你来操作）**：建 GitHub OAuth App；建 D1 库 `smails-core`、`smails-mail`；建 R2 桶 `smails-mail`（先不加生命周期规则）；把 `GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET`、`TOKEN_SECRETS`、`ADDR_SECRET` 写进 `worker/.env.production`，首次部署时用 `cf deploy --prebuilt --secrets-file .env.production` 带上（以后单独改用 `cf workers secrets update`）。
 2. **开发**：在新分支上实现，用 `pnpm run dev`（Vite + `@cloudflare/vite-plugin`）和本地 D1 跑通，本地密钥放 `worker/.env`。单元测试覆盖令牌、PKCE、CIMD 校验、地址校验码；端到端测试覆盖登录 → 创建 → 发一封测试邮件 → `wait` → 读取。
-3. **用真实客户端验证**：在 staging（workers.dev）上，用 Claude Code、Claude Desktop、Cursor 实际走一遍远程 MCP 的登录。
+3. **用真实客户端验证**：在本地开发服务器上，用 Claude Code、Cursor 等实际走一遍远程 MCP 的登录（不设 staging 环境）。
 4. **部署 worker**：新接口上线，旧接口返回 410。**从这一刻起脚本被挡住。**
    - 暂时保留 `Mailbox` 这个 DO 类，但把它精简到只剩 `alarm()` 清空数据，WebSocket 一连上就关闭。没有新的访问以后，旧 DO 会在 7 天内各自通过 alarm 删掉自己的数据，137 GB 会自然清零，不用跑一次性的批量删除。
 5. **发布 CLI v0.1.0**，更新 `server.json` 并提交到 MCP Registry。
@@ -411,7 +411,7 @@ mail 库里只有第 6.2 节的 `messages` 表。
 
 ## 14. 需要你操作或决定的事
 
-1. **建 GitHub OAuth App**：Homepage 填 `https://smails.dev`，回调地址填 `https://smails.dev/oauth/github/callback`。staging 另外建一个，回调地址填 workers.dev 的域名。
+1. **建 GitHub OAuth App**：Homepage 填 `https://smails.dev`，回调地址填 `https://smails.dev/oauth/github/callback`。
 2. **确认默认参数**：免费档每天 20 个邮箱、邮箱有效期 7 天、邮件不删除（过期邮箱读不到）、D1 只存元数据、GitHub 账号年龄至少 30 天。
 3. **确认不保存附件。**
 4. **确认旧接口直接返回 410**，不给过渡期。
@@ -465,5 +465,5 @@ smails/
 - **远程 MCP**：每个请求新建一个 `McpServer` 加一个无状态的传输层，不开会话，不用 Cloudflare `agents` 包（它的 `McpAgent` 每个会话都会开一个 DO）。
 - **本地 MCP**：只做转发，把 stdio 收到的 JSON-RPC 原样转给 `https://smails.dev/mcp`，带上本地保存的令牌；本地只额外实现 `login` 工具。工具逻辑只在服务端写一份。
 - **日志**：跟 smail 一样关掉调用日志，只保留 issues。
-- **staging**：`--mode staging` 部署成 `<名字>-staging`，只有 workers.dev 地址，用来在上线前拿真实的 MCP 客户端测 OAuth。
+- **没有 staging**：上线前用本地开发服务器（真实的 workerd）加真实的 MCP 客户端测 OAuth，`/__dev/login` 让本地测试不需要 GitHub App。
 - **提交前检查**：`pnpm run check` = 类型检查 + oxlint + oxfmt 检查。CI 跑同一条命令。

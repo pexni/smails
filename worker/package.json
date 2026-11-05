@@ -18,8 +18,7 @@
 		"unban": "node d1.mjs unban",
 		"deploy": "pnpm --filter smails-web run build && vite build && pnpm run migrate && cf deploy --prebuilt",
 		"deploy:first": "pnpm --filter smails-web run build && vite build && pnpm run migrate && cf deploy --prebuilt --secrets-file .env.production",
-		"deploy:dry-run": "pnpm --filter smails-web run build && vite build && cf deploy --prebuilt --dry-run",
-		"deploy:staging": "pnpm --filter smails-web run build && vite build --mode staging && cf deploy --prebuilt --mode staging"
+		"deploy:dry-run": "pnpm --filter smails-web run build && vite build && cf deploy --prebuilt --dry-run"
 	},
 	"dependencies": {
 		"@cfworker/json-schema": "^4.1.6",
