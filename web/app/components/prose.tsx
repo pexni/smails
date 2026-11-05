@@ -1,21 +1,16 @@
 import * as stylex from "@stylexjs/stylex";
 import type { ParentProps } from "solid-js";
 
-import {
-	color,
-	font,
-	layout,
-	radius,
-	space,
-	text,
-} from "#/ui/tokens.stylex.ts";
+import { color, font, layout, space, text } from "#/ui/tokens.stylex.ts";
 
 // 文档页的排版：标题、段落、列表。正文栏不超过 44rem，一行六七十个字母。
 
+// 文档目录：只在文档页的侧栏里出现一次（顶部导航只有一个 Docs 入口）。
 const DOCS = [
 	{ href: "/docs/mcp", label: "MCP server" },
 	{ href: "/docs/cli", label: "CLI" },
 	{ href: "/docs/api", label: "HTTP API" },
+	{ href: "/otp", label: "Verification codes" },
 ];
 
 const styles = stylex.create({
@@ -25,35 +20,48 @@ const styles = stylex.create({
 		paddingInline: space.xl,
 		paddingBottom: space["4xl"],
 	},
-	article: { maxWidth: layout.content, paddingTop: space["3xl"] },
-	docsNav: {
+	// 文档页：左边目录，右边正文。窄屏时目录收成正文上方的一行。
+	docsGrid: {
+		display: "grid",
+		gridTemplateColumns: {
+			default: "minmax(0, 1fr)",
+			"@media (min-width: 56rem)": "11rem minmax(0, 1fr)",
+		},
+		gap: { default: 0, "@media (min-width: 56rem)": space["4xl"] },
+	},
+	sidebar: {
+		position: { default: "static", "@media (min-width: 56rem)": "sticky" },
+		top: "5.5rem",
+		alignSelf: "start",
+		paddingTop: {
+			default: space.xl,
+			"@media (min-width: 56rem)": space["3xl"],
+		},
+	},
+	sideList: {
 		display: "flex",
-		gap: space.xs,
-		marginBottom: space["2xl"],
-		paddingBottom: space.md,
-		borderBottomWidth: "1px",
+		flexDirection: { default: "row", "@media (min-width: 56rem)": "column" },
+		gap: { default: space.lg, "@media (min-width: 56rem)": space.sm },
+		margin: 0,
+		padding: 0,
+		listStyle: "none",
+		overflowX: "auto",
+		borderBottomWidth: { default: "1px", "@media (min-width: 56rem)": 0 },
 		borderBottomStyle: "solid",
 		borderBottomColor: color.border,
-		overflowX: "auto",
+		paddingBottom: { default: space.md, "@media (min-width: 56rem)": 0 },
 	},
-	docsLink: {
-		paddingBlock: space.xs,
-		paddingInline: space.md,
-		borderRadius: radius.full,
+	sideLink: {
 		color: {
 			default: color.subtle,
 			":hover": color.text,
 			":is([aria-current=page])": color.text,
 		},
-		backgroundColor: {
-			default: "transparent",
-			":is([aria-current=page])": color.raised,
-		},
 		fontSize: text.sm,
-		fontWeight: 500,
 		textDecoration: "none",
 		whiteSpace: "nowrap",
 	},
+	article: { maxWidth: layout.content, paddingTop: space["3xl"] },
 	eyebrow: {
 		margin: 0,
 		color: color.accentText,
@@ -108,25 +116,36 @@ export function Article(
 		docs?: boolean;
 	}>,
 ) {
+	const body = (
+		<article {...stylex.attrs(styles.article)}>
+			{props.eyebrow ? (
+				<p {...stylex.attrs(styles.eyebrow)}>{props.eyebrow}</p>
+			) : null}
+			<h1 {...stylex.attrs(styles.h1)}>{props.title}</h1>
+			{props.lead ? <p {...stylex.attrs(styles.lead)}>{props.lead}</p> : null}
+			{props.children}
+		</article>
+	);
 	return (
 		<div {...stylex.attrs(styles.page)}>
-			<article {...stylex.attrs(styles.article)}>
-				{props.docs ? (
-					<nav aria-label="Docs" {...stylex.attrs(styles.docsNav)}>
-						{DOCS.map((item) => (
-							<a href={item.href} {...stylex.attrs(styles.docsLink)}>
-								{item.label}
-							</a>
-						))}
+			{props.docs ? (
+				<div {...stylex.attrs(styles.docsGrid)}>
+					<nav aria-label="Docs" {...stylex.attrs(styles.sidebar)}>
+						<ul {...stylex.attrs(styles.sideList)}>
+							{DOCS.map((item) => (
+								<li>
+									<a href={item.href} {...stylex.attrs(styles.sideLink)}>
+										{item.label}
+									</a>
+								</li>
+							))}
+						</ul>
 					</nav>
-				) : null}
-				{props.eyebrow ? (
-					<p {...stylex.attrs(styles.eyebrow)}>{props.eyebrow}</p>
-				) : null}
-				<h1 {...stylex.attrs(styles.h1)}>{props.title}</h1>
-				{props.lead ? <p {...stylex.attrs(styles.lead)}>{props.lead}</p> : null}
-				{props.children}
-			</article>
+					{body}
+				</div>
+			) : (
+				body
+			)}
 		</div>
 	);
 }

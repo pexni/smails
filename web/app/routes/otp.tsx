@@ -11,7 +11,7 @@ export default function Otp() {
 	});
 	return (
 		<Article
-			eyebrow="Guide"
+			docs
 			title="Verification codes and magic links, handled by your agent"
 			lead="Sign-up flows stop at “check your email”. With smails the agent has an inbox of its own, so it can read the code and keep going."
 		>

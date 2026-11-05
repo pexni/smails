@@ -1,41 +1,16 @@
+import { useLocation } from "@solidjs/router";
 import * as stylex from "@stylexjs/stylex";
 import type { ParentProps } from "solid-js";
 
-import { ButtonLink } from "#/ui/Button.tsx";
 import { Logo } from "#/ui/Logo.tsx";
 import { color, font, layout, space, text } from "#/ui/tokens.stylex.ts";
 
-const NAV = [
-	{ href: "/docs/mcp", label: "MCP" },
-	{ href: "/docs/cli", label: "CLI" },
-	{ href: "/docs/api", label: "API" },
-];
+// 顶部只有两个入口：Docs（文档内部的目录在文档页的侧栏里，不在这里重复）和 Account。
 
-const FOOTER = [
-	{
-		title: "Product",
-		links: [
-			{ href: "/docs/mcp", label: "MCP server" },
-			{ href: "/docs/cli", label: "CLI" },
-			{ href: "/docs/api", label: "HTTP API" },
-			{ href: "/otp", label: "Verification codes" },
-		],
-	},
-	{
-		title: "Account",
-		links: [
-			{ href: "/account", label: "Account" },
-			{ href: "/privacy", label: "Privacy" },
-		],
-	},
-	{
-		title: "More",
-		links: [
-			{ href: "https://github.com/pexni/smails", label: "GitHub" },
-			{ href: "https://www.npmjs.com/package/@smails/cli", label: "npm" },
-			{ href: "https://smail.pw", label: "smail.pw — inbox for people" },
-		],
-	},
+const FOOTER_LINKS = [
+	{ href: "/privacy", label: "Privacy" },
+	{ href: "https://github.com/pexni/smails", label: "GitHub" },
+	{ href: "https://smail.pw", label: "smail.pw" },
 ];
 
 const styles = stylex.create({
@@ -48,131 +23,92 @@ const styles = stylex.create({
 		fontFamily: font.sans,
 		fontSize: text.md,
 		lineHeight: 1.6,
+		fontFeatureSettings: '"ss01", "cv11"',
 	},
 	header: {
 		position: "sticky",
 		top: 0,
 		zIndex: 10,
-		borderBottomWidth: "1px",
-		borderBottomStyle: "solid",
-		borderBottomColor: color.border,
-		backgroundColor: `color-mix(in srgb, ${color.bg} 78%, transparent)`,
+		backgroundColor: `color-mix(in srgb, ${color.bg} 82%, transparent)`,
 		backdropFilter: "saturate(1.4) blur(12px)",
 	},
 	headerInner: {
 		display: "flex",
 		alignItems: "center",
-		gap: space.xl,
+		justifyContent: "space-between",
 		maxWidth: layout.wide,
-		height: "3.75rem",
+		height: "4rem",
 		marginInline: "auto",
 		paddingInline: space.xl,
 	},
-	nav: {
-		display: "flex",
-		flexGrow: 1,
-		gap: { default: space.lg, "@media (min-width: 40rem)": space.xl },
-	},
+	nav: { display: "flex", alignItems: "center", gap: space.xl },
 	navLink: {
-		color: {
-			default: color.muted,
-			":hover": color.text,
-			":is([aria-current=page])": color.text,
-		},
+		color: { default: color.muted, ":hover": color.text },
 		fontSize: text.sm,
-		fontWeight: 500,
 		textDecoration: "none",
 		transitionProperty: "color",
 		transitionDuration: "120ms",
 	},
+	navActive: { color: color.text },
 	main: { flexGrow: 1, width: "100%", minWidth: 0 },
 	footer: {
-		borderTopWidth: "1px",
-		borderTopStyle: "solid",
-		borderTopColor: color.border,
+		display: "flex",
+		flexWrap: "wrap",
+		alignItems: "center",
+		justifyContent: "space-between",
+		gap: space.lg,
+		width: "100%",
+		maxWidth: layout.wide,
+		marginInline: "auto",
+		paddingBlock: space["2xl"],
+		paddingInline: space.xl,
 		color: color.subtle,
 		fontSize: text.sm,
 	},
-	footerInner: {
-		display: "grid",
-		gridTemplateColumns: {
-			default: "minmax(0, 1fr)",
-			"@media (min-width: 48rem)": "1.4fr repeat(3, minmax(0, 1fr))",
-		},
-		gap: space["2xl"],
-		maxWidth: layout.wide,
-		marginInline: "auto",
-		paddingBlock: space["3xl"],
-		paddingInline: space.xl,
-	},
-	tagline: { marginBlock: `${space.md} 0`, maxWidth: "18rem" },
-	columnTitle: {
-		marginBlock: `0 ${space.md}`,
-		color: color.text,
-		fontSize: text.sm,
-		fontWeight: 600,
-	},
-	links: {
-		display: "grid",
-		gap: space.sm,
-		margin: 0,
-		padding: 0,
-		listStyle: "none",
-	},
-	link: {
+	footerLinks: { display: "flex", flexWrap: "wrap", gap: space.xl },
+	footerLink: {
 		color: { default: color.subtle, ":hover": color.text },
 		textDecoration: "none",
-	},
-	signIn: {
-		display: { default: "none", "@media (min-width: 30rem)": "inline-flex" },
 	},
 });
 
 export function Layout(props: ParentProps) {
+	const location = useLocation();
+	const inDocs = () =>
+		location.pathname.startsWith("/docs") || location.pathname === "/otp";
+	const inAccount = () => location.pathname === "/account";
+
 	return (
 		<div {...stylex.attrs(styles.shell)}>
 			<header {...stylex.attrs(styles.header)}>
 				<div {...stylex.attrs(styles.headerInner)}>
 					<Logo />
 					<nav aria-label="Main" {...stylex.attrs(styles.nav)}>
-						{NAV.map((item) => (
-							<a href={item.href} {...stylex.attrs(styles.navLink)}>
-								{item.label}
-							</a>
-						))}
-					</nav>
-					<span {...stylex.attrs(styles.signIn)}>
-						<ButtonLink href="/account" variant="outline" small>
+						<a
+							href="/docs/mcp"
+							{...stylex.attrs(styles.navLink, inDocs() && styles.navActive)}
+						>
+							Docs
+						</a>
+						<a
+							href="/account"
+							{...stylex.attrs(styles.navLink, inAccount() && styles.navActive)}
+						>
 							Account
-						</ButtonLink>
-					</span>
+						</a>
+					</nav>
 				</div>
 			</header>
 			<main {...stylex.attrs(styles.main)}>{props.children}</main>
 			<footer {...stylex.attrs(styles.footer)}>
-				<div {...stylex.attrs(styles.footerInner)}>
-					<div>
-						<Logo />
-						<p {...stylex.attrs(styles.tagline)}>
-							Disposable email inboxes for AI agents. Receive-only, free to
-							start.
-						</p>
-					</div>
-					{FOOTER.map((column) => (
-						<div>
-							<p {...stylex.attrs(styles.columnTitle)}>{column.title}</p>
-							<ul {...stylex.attrs(styles.links)}>
-								{column.links.map((link) => (
-									<li>
-										<a href={link.href} {...stylex.attrs(styles.link)}>
-											{link.label}
-										</a>
-									</li>
-								))}
-							</ul>
-						</div>
+				<span>smails — email inboxes for AI agents</span>
+				<span {...stylex.attrs(styles.footerLinks)}>
+					{FOOTER_LINKS.map((link) => (
+						<a href={link.href} {...stylex.attrs(styles.footerLink)}>
+							{link.label}
+						</a>
 					))}
-				</div>
+				</span>
 			</footer>
 		</div>
 	);

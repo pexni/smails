@@ -1,11 +1,9 @@
-import type { JSX } from "@solidjs/web";
 import * as stylex from "@stylexjs/stylex";
 import { createSignal } from "solid-js";
 
 import { AgentDemo } from "#/components/agent-demo.tsx";
 import { type CodeTab, CodeTabs } from "#/components/code-tabs.tsx";
 import { SETUP_PROMPT } from "#/setup.ts";
-import { ButtonLink } from "#/ui/Button.tsx";
 import {
 	color,
 	font,
@@ -16,26 +14,22 @@ import {
 } from "#/ui/tokens.stylex.ts";
 import { usePageHead } from "#/utils/head.ts";
 
-const CONNECT: CodeTab[] = [
-	{
-		id: "agent",
-		label: "Ask your agent",
-		caption:
-			"Paste this into Claude Code or Codex. The agent adds the server itself; you only sign in with GitHub when it asks.",
-		code: SETUP_PROMPT,
-	},
+// 首页只有一个主要操作：把那句话复制给自己的 agent。每样东西只出现一次：
+// 那句话在 hero，演示是唯一的大图，手动配置放在最后给不想用那句话的人。
+
+const MANUAL: CodeTab[] = [
 	{
 		id: "claude",
 		label: "Claude Code",
 		caption:
-			"Add the server, then run /mcp inside Claude Code to sign in with GitHub.",
+			"Add the server, then run /mcp in Claude Code to sign in with GitHub.",
 		code: "claude mcp add --transport http --scope user smails https://smails.dev/mcp",
 	},
 	{
 		id: "codex",
 		label: "Codex",
 		caption:
-			"Add the server, then sign in with GitHub in the browser window that opens.",
+			"Add the server and sign in with GitHub in the browser window that opens.",
 		code: `codex mcp add smails --url https://smails.dev/mcp
 codex mcp login smails`,
 	},
@@ -44,375 +38,177 @@ codex mcp login smails`,
 		label: "CLI",
 		caption:
 			"From any shell or script: sign in once, then create inboxes and wait for codes.",
-		code: `npx @smails/cli login                 # confirm in the browser
-npx @smails/cli create                # → brave-otter-k3j9x2m8@smails.dev
-npx @smails/cli wait --subject code   # blocks until the email arrives`,
+		code: `npx @smails/cli login
+npx @smails/cli create
+npx @smails/cli wait --subject code`,
 	},
 ];
 
-type Feature = { title: string; body: string; icon: () => JSX.Element };
-
-const icon = (path: string) => () => (
-	<svg
-		width="20"
-		height="20"
-		viewBox="0 0 24 24"
-		fill="none"
-		stroke="currentColor"
-		stroke-width="1.75"
-		stroke-linecap="round"
-		stroke-linejoin="round"
-		aria-hidden="true"
-	>
-		<path d={path} />
-	</svg>
-);
-
-const FEATURES: Feature[] = [
+const FEATURES = [
 	{
-		title: "Push, not polling",
-		body: "wait_for_message returns the moment the email lands, with the full body. One call instead of a loop.",
-		icon: icon("M13 2 3 14h9l-1 8 10-12h-9l1-8z"),
+		title: "Waits for the email",
+		body: "wait_for_message returns the moment the email lands, with the whole body. No polling loop.",
 	},
 	{
-		title: "Built for agents",
-		body: "A remote MCP server with OAuth, a local stdio server, a CLI and a plain HTTP API — same tools everywhere.",
-		icon: icon("m4 17 6-6-6-6 M12 19h8"),
-	},
-	{
-		title: "Sign in once",
-		body: "GitHub sign-in in the browser. MCP clients and the CLI keep the session; there are no API keys to paste.",
-		icon: icon(
-			"M15 7a4 4 0 1 1-3.5 6L4 20.5V17h3v-3h3l1.5-1.5A4 4 0 0 1 15 7z M16 9h.01",
-		),
+		title: "Signs in once",
+		body: "GitHub sign-in in the browser. Claude Code and Codex keep the session; there are no keys to paste.",
 	},
 	{
 		title: "Free to start",
-		body: "20 new inboxes a day per account. Each one lives for 7 days. Receive-only, no setup.",
-		icon: icon(
-			"M20 12v9H4v-9 M2 7h20v5H2z M12 21V7 M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z",
-		),
+		body: "20 new inboxes a day per account. Each one lives for 7 days. Receive-only.",
 	},
 ];
-
-const STEPS = [
-	{
-		title: "Create an inbox",
-		body: "create_mailbox returns a fresh address in milliseconds.",
-		code: "create_mailbox()",
-	},
-	{
-		title: "Sign up anywhere",
-		body: "The agent uses the address on the site it is working with.",
-		code: "fill(email, address)",
-	},
-	{
-		title: "Read the code",
-		body: "wait_for_message blocks until the email arrives, then returns it.",
-		code: 'wait_for_message({ subject: "code" })',
-	},
-];
-
-const CLIENTS = ["Claude Code", "Codex"];
 
 const styles = stylex.create({
-	// —— hero ——
-	hero: {
-		position: "relative",
-		overflow: "hidden",
-		borderBottomWidth: "1px",
-		borderBottomStyle: "solid",
-		borderBottomColor: color.border,
-	},
-	// 细网格，越往边缘越淡。
-	grid: {
-		position: "absolute",
-		inset: 0,
-		backgroundImage: `linear-gradient(${color.grid} 1px, transparent 1px), linear-gradient(90deg, ${color.grid} 1px, transparent 1px)`,
-		backgroundSize: "44px 44px",
-		maskImage:
-			"radial-gradient(ellipse 70% 60% at 50% 30%, black 30%, transparent 75%)",
-		pointerEvents: "none",
-	},
-	// 光晕在终端窗口后面，四周都淡出，不贴着 header 留下硬边。
-	glow: {
-		position: "absolute",
-		top: "50%",
-		insetInlineEnd: "-8rem",
-		width: "48rem",
-		height: "40rem",
-		transform: "translateY(-50%)",
-		backgroundImage: `radial-gradient(closest-side, ${color.glow}, transparent)`,
-		pointerEvents: "none",
-	},
-	heroInner: {
-		position: "relative",
-		display: "grid",
-		gridTemplateColumns: {
-			default: "minmax(0, 1fr)",
-			"@media (min-width: 60rem)": "minmax(0, 1fr) minmax(0, 1.05fr)",
-		},
-		alignItems: "center",
-		gap: { default: space["3xl"], "@media (min-width: 60rem)": space["4xl"] },
+	container: {
 		maxWidth: layout.wide,
 		marginInline: "auto",
 		paddingInline: space.xl,
-		paddingBlock: {
-			default: space["3xl"],
-			"@media (min-width: 60rem)": space["4xl"],
-		},
 	},
-	pill: {
-		display: "inline-flex",
+	hero: {
+		display: "flex",
+		flexDirection: "column",
 		alignItems: "center",
-		gap: space.sm,
-		paddingBlock: space.xs,
-		paddingInline: space.md,
-		borderWidth: "1px",
-		borderStyle: "solid",
-		borderColor: color.border,
-		borderRadius: radius.full,
-		backgroundColor: color.surface,
-		color: color.muted,
-		fontSize: text.xs,
-		fontWeight: 500,
-	},
-	pillDot: {
-		width: "6px",
-		height: "6px",
-		borderRadius: radius.full,
-		backgroundColor: color.accent,
+		paddingTop: { default: space["4xl"], "@media (min-width: 48rem)": "128px" },
+		paddingBottom: {
+			default: space["3xl"],
+			"@media (min-width: 48rem)": space["4xl"],
+		},
+		textAlign: "center",
 	},
 	title: {
-		marginBlock: `${space.xl} 0`,
-		fontSize: text["3xl"],
-		fontWeight: 700,
-		lineHeight: 1.02,
+		margin: 0,
+		fontSize: "clamp(2.75rem, 1.6rem + 4.6vw, 5rem)",
+		fontWeight: 600,
+		lineHeight: 1,
 		letterSpacing: "-0.045em",
 		textWrap: "balance",
 	},
-	titleAccent: {
-		backgroundImage: `linear-gradient(180deg, ${color.text} 30%, ${color.subtle} 110%)`,
-		backgroundClip: "text",
-		color: "transparent",
-	},
+	titleSecond: { color: color.subtle },
 	lead: {
-		maxWidth: "32rem",
+		maxWidth: "34rem",
 		marginBlock: `${space.xl} 0`,
 		color: color.muted,
-		fontSize: text.lg,
+		fontSize: { default: text.md, "@media (min-width: 48rem)": text.lg },
 		lineHeight: 1.6,
 		textWrap: "pretty",
 	},
-	actions: {
+	prompt: {
 		display: "flex",
-		flexWrap: "wrap",
-		gap: space.md,
-		marginTop: space["2xl"],
-	},
-	installLabel: {
-		margin: `${space.xl} 0 ${space.sm}`,
-		color: color.subtle,
-		fontSize: text.sm,
-	},
-	install: {
-		display: "inline-flex",
 		alignItems: "center",
-		gap: space.md,
-		maxWidth: "100%",
-		textAlign: "start",
-		lineHeight: 1.5,
-		paddingBlock: space.sm,
-		paddingInline: space.md,
+		gap: space.lg,
+		width: "100%",
+		maxWidth: "40rem",
+		marginTop: space["2xl"],
+		paddingBlock: space.md,
+		paddingInlineStart: space.lg,
+		paddingInlineEnd: space.md,
 		borderWidth: "1px",
 		borderStyle: "solid",
-		borderColor: { default: color.border, ":hover": color.borderStrong },
-		borderRadius: radius.md,
-		backgroundColor: "transparent",
-		color: color.muted,
+		borderColor: { default: color.borderStrong, ":hover": color.muted },
+		borderRadius: radius.lg,
+		backgroundColor: color.surface,
+		color: color.text,
 		fontFamily: font.mono,
 		fontSize: text.sm,
+		lineHeight: 1.5,
+		textAlign: "start",
 		cursor: "pointer",
+		transitionProperty: "border-color",
+		transitionDuration: "120ms",
 		outline: { default: "none", ":focus-visible": `2px solid ${color.accent}` },
+		outlineOffset: "3px",
 	},
-	dollar: { color: color.subtle },
-	copyHint: { color: color.subtle, fontFamily: font.sans, fontSize: text.xs },
-	// —— sections ——
-	section: {
-		maxWidth: layout.wide,
-		marginInline: "auto",
-		paddingInline: space.xl,
-		// 各段之间：手机 48px，桌面 80px（上下各一份，叠起来正好）。
-		paddingBlock: {
-			default: space["3xl"],
-			"@media (min-width: 60rem)": "80px",
-		},
+	promptText: { flexGrow: 1, minWidth: 0, overflowWrap: "anywhere" },
+	promptMark: { color: color.subtle, marginInlineEnd: space.sm },
+	copy: {
+		flexShrink: 0,
+		paddingBlock: space.xs,
+		paddingInline: space.md,
+		borderRadius: radius.md,
+		backgroundColor: color.accent,
+		color: color.onAccent,
+		fontFamily: font.sans,
+		fontSize: text.sm,
+		fontWeight: 500,
 	},
-	clients: {
-		display: "flex",
-		flexWrap: "wrap",
-		alignItems: "center",
-		justifyContent: "center",
-		gap: { default: space.lg, "@media (min-width: 40rem)": space["2xl"] },
-		maxWidth: layout.wide,
-		marginInline: "auto",
-		paddingBlock: space["2xl"],
-		paddingInline: space.xl,
+	hint: {
+		marginBlock: `${space.lg} 0`,
 		color: color.subtle,
 		fontSize: text.sm,
 	},
-	clientsLabel: { color: color.muted },
-	client: { fontFamily: font.mono, letterSpacing: "-0.01em" },
-	eyebrow: {
-		margin: 0,
-		color: color.accentText,
-		fontFamily: font.mono,
-		fontSize: text.xs,
-		fontWeight: 600,
-		letterSpacing: "0.08em",
-		textTransform: "uppercase",
+	hintLink: {
+		color: { default: color.muted, ":hover": color.text },
+		textUnderlineOffset: "3px",
 	},
-	sectionTitle: {
-		maxWidth: "36rem",
-		marginBlock: `${space.md} ${space["2xl"]}`,
-		fontSize: text["2xl"],
-		lineHeight: 1.12,
-		letterSpacing: "-0.03em",
-		textWrap: "balance",
+	demo: {
+		maxWidth: "48rem",
+		marginInline: "auto",
+		paddingBottom: {
+			default: space["4xl"],
+			"@media (min-width: 48rem)": "128px",
+		},
 	},
 	features: {
 		display: "grid",
 		gridTemplateColumns: {
 			default: "minmax(0, 1fr)",
-			"@media (min-width: 40rem)": "repeat(2, minmax(0, 1fr))",
-			"@media (min-width: 64rem)": "repeat(4, minmax(0, 1fr))",
-		},
-		gap: space.lg,
-	},
-	card: {
-		position: "relative",
-		paddingBlock: space.xl,
-		paddingInline: space.xl,
-		borderWidth: "1px",
-		borderStyle: "solid",
-		borderColor: { default: color.border, ":hover": color.borderStrong },
-		borderRadius: radius.lg,
-		backgroundColor: color.surface,
-		transitionProperty: "border-color, transform",
-		transitionDuration: "160ms",
-		transform: { default: "none", ":hover": "translateY(-2px)" },
-	},
-	iconBox: {
-		display: "inline-grid",
-		placeItems: "center",
-		width: "2.25rem",
-		height: "2.25rem",
-		borderRadius: radius.md,
-		backgroundColor: color.accentSoft,
-		color: color.accentText,
-	},
-	cardTitle: {
-		marginBlock: `${space.lg} ${space.sm}`,
-		fontSize: text.md,
-		fontWeight: 600,
-	},
-	cardBody: {
-		margin: 0,
-		color: color.muted,
-		fontSize: text.sm,
-		lineHeight: 1.6,
-	},
-	split: {
-		display: "grid",
-		gridTemplateColumns: {
-			default: "minmax(0, 1fr)",
-			"@media (min-width: 60rem)": "minmax(0, 0.8fr) minmax(0, 1.2fr)",
-		},
-		gap: space["3xl"],
-		alignItems: "start",
-	},
-	splitText: {
-		margin: 0,
-		color: color.muted,
-		fontSize: text.lg,
-		maxWidth: "26rem",
-	},
-	steps: {
-		display: "grid",
-		gridTemplateColumns: {
-			default: "minmax(0, 1fr)",
 			"@media (min-width: 48rem)": "repeat(3, minmax(0, 1fr))",
 		},
-		gap: space.lg,
-		margin: 0,
-		padding: 0,
-		listStyle: "none",
+		gap: { default: space["2xl"], "@media (min-width: 48rem)": space["3xl"] },
+		paddingBottom: {
+			default: space["4xl"],
+			"@media (min-width: 48rem)": "128px",
+		},
 	},
-	step: {
-		paddingTop: space.xl,
+	feature: {
+		paddingTop: space.lg,
 		borderTopWidth: "1px",
 		borderTopStyle: "solid",
-		borderTopColor: color.borderStrong,
+		borderTopColor: color.border,
 	},
-	stepNumber: {
-		color: color.accentText,
-		fontFamily: font.mono,
+	featureTitle: { margin: 0, fontSize: text.md, fontWeight: 500 },
+	featureBody: {
+		marginBlock: `${space.sm} 0`,
+		color: color.muted,
 		fontSize: text.sm,
+		lineHeight: 1.65,
 	},
-	stepCode: {
-		display: "block",
-		marginTop: space.lg,
-		color: color.subtle,
-		fontFamily: font.mono,
-		fontSize: text.xs,
-		overflowWrap: "anywhere",
+	setup: {
+		display: "grid",
+		gridTemplateColumns: {
+			default: "minmax(0, 1fr)",
+			"@media (min-width: 56rem)": "minmax(0, 0.7fr) minmax(0, 1.3fr)",
+		},
+		gap: space["2xl"],
+		alignItems: "start",
+		paddingBottom: {
+			default: space["4xl"],
+			"@media (min-width: 48rem)": "128px",
+		},
+		scrollMarginTop: "6rem",
 	},
-	// —— 结尾 ——
-	cta: {
-		position: "relative",
-		overflow: "hidden",
-		paddingBlock: space["4xl"],
-		paddingInline: space["2xl"],
-		borderWidth: "1px",
-		borderStyle: "solid",
-		borderColor: color.border,
-		borderRadius: radius.xl,
-		backgroundColor: color.surface,
-		textAlign: "center",
-	},
-	ctaGlow: {
-		position: "absolute",
-		insetInline: 0,
-		bottom: "-60%",
-		height: "100%",
-		backgroundImage: `radial-gradient(ellipse at center, ${color.glow}, transparent 60%)`,
-		pointerEvents: "none",
-	},
-	ctaTitle: {
-		position: "relative",
-		marginBlock: `0 ${space.md}`,
-		fontSize: text["2xl"],
+	setupTitle: {
+		margin: 0,
+		fontSize: text.xl,
+		fontWeight: 600,
 		letterSpacing: "-0.03em",
 	},
-	ctaText: { position: "relative", margin: 0, color: color.muted },
-	ctaActions: {
-		position: "relative",
-		display: "flex",
-		flexWrap: "wrap",
-		justifyContent: "center",
-		gap: space.md,
-		marginTop: space["2xl"],
+	setupText: {
+		marginBlock: `${space.md} 0`,
+		maxWidth: "22rem",
+		color: color.muted,
+		fontSize: text.sm,
 	},
 	humans: {
-		marginTop: space.xl,
+		paddingBottom: space["3xl"],
 		color: color.subtle,
 		fontSize: text.sm,
 		textAlign: "center",
 	},
-	humansLink: { color: color.text, textUnderlineOffset: "3px" },
 });
 
-function InstallChip() {
+function PromptBox() {
 	const [copied, setCopied] = createSignal(false);
 	const copy = async () => {
 		await navigator.clipboard.writeText(SETUP_PROMPT);
@@ -420,146 +216,79 @@ function InstallChip() {
 		setTimeout(() => setCopied(false), 1500);
 	};
 	return (
-		<>
-			<p {...stylex.attrs(styles.installLabel)}>
-				Or paste this into Claude Code or Codex:
-			</p>
-			<button
-				type="button"
-				onClick={() => void copy()}
-				{...stylex.attrs(styles.install)}
-			>
-				<span>
-					<span {...stylex.attrs(styles.dollar)}>› </span>
-					{SETUP_PROMPT}
-				</span>
-				<span {...stylex.attrs(styles.copyHint)}>
-					{copied() ? "Copied" : "Copy"}
-				</span>
-			</button>
-		</>
+		<button
+			type="button"
+			aria-label="Copy the setup prompt"
+			onClick={() => void copy()}
+			{...stylex.attrs(styles.prompt)}
+		>
+			<span {...stylex.attrs(styles.promptText)}>
+				<span {...stylex.attrs(styles.promptMark)}>›</span>
+				{SETUP_PROMPT}
+			</span>
+			<span {...stylex.attrs(styles.copy)}>{copied() ? "Copied" : "Copy"}</span>
+		</button>
 	);
 }
 
 export default function Home() {
 	usePageHead({
-		title: "smails — email inboxes for AI agents (MCP, CLI, API)",
+		title: "smails — email inboxes for AI agents",
 		description:
-			"Give your AI agent its own disposable inbox. It creates an address, signs up anywhere and waits for the verification code or magic link — over remote MCP, a CLI or HTTP.",
+			"Give your AI agent its own email address. It signs up, waits for the verification email and reads the code on its own. Set up Claude Code or Codex with one sentence.",
 	});
 	return (
 		<>
-			<section {...stylex.attrs(styles.hero)}>
-				<div {...stylex.attrs(styles.grid)} />
-				<div {...stylex.attrs(styles.glow)} />
-				<div {...stylex.attrs(styles.heroInner)}>
-					<div>
-						<span {...stylex.attrs(styles.pill)}>
-							<span {...stylex.attrs(styles.pillDot)} />
-							Remote MCP · OAuth · CLI
-						</span>
-						<h1 {...stylex.attrs(styles.title)}>
-							Email inboxes for{" "}
-							<span {...stylex.attrs(styles.titleAccent)}>AI agents.</span>
-						</h1>
-						<p {...stylex.attrs(styles.lead)}>
-							Your agent creates an address, signs up anywhere, and waits for
-							the verification code or magic link — then keeps going on its own.
-						</p>
-						<div {...stylex.attrs(styles.actions)}>
-							<ButtonLink href="/docs/mcp" variant="accent">
-								Connect over MCP
-							</ButtonLink>
-							<ButtonLink href="/docs/cli" variant="outline">
-								Use the CLI
-							</ButtonLink>
-						</div>
-						<InstallChip />
-					</div>
-					<AgentDemo />
-				</div>
-			</section>
-
-			<div {...stylex.attrs(styles.clients)}>
-				<span {...stylex.attrs(styles.clientsLabel)}>Works with</span>
-				{CLIENTS.map((client) => (
-					<span {...stylex.attrs(styles.client)}>{client}</span>
-				))}
-			</div>
-
-			<section {...stylex.attrs(styles.section)}>
-				<p {...stylex.attrs(styles.eyebrow)}>Why smails</p>
-				<h2 {...stylex.attrs(styles.sectionTitle)}>
-					Everything an agent needs to get past “check your email”.
-				</h2>
-				<div {...stylex.attrs(styles.features)}>
-					{FEATURES.map((feature) => (
-						<div {...stylex.attrs(styles.card)}>
-							<span {...stylex.attrs(styles.iconBox)}>{feature.icon()}</span>
-							<h3 {...stylex.attrs(styles.cardTitle)}>{feature.title}</h3>
-							<p {...stylex.attrs(styles.cardBody)}>{feature.body}</p>
-						</div>
-					))}
-				</div>
-			</section>
-
-			<section {...stylex.attrs(styles.section)}>
-				<div {...stylex.attrs(styles.split)}>
-					<div>
-						<p {...stylex.attrs(styles.eyebrow)}>Connect</p>
-						<h2 {...stylex.attrs(styles.sectionTitle)}>
-							Up and running in a minute.
-						</h2>
-						<p {...stylex.attrs(styles.splitText)}>
-							Paste one sentence into Claude Code or Codex and the agent sets
-							itself up, or use the CLI from a shell. Both sign in once with
-							GitHub and share the same tools.
-						</p>
-					</div>
-					<CodeTabs tabs={CONNECT} />
-				</div>
-			</section>
-
-			<section {...stylex.attrs(styles.section)}>
-				<p {...stylex.attrs(styles.eyebrow)}>How it works</p>
-				<h2 {...stylex.attrs(styles.sectionTitle)}>
-					Three tool calls, no polling.
-				</h2>
-				<ol {...stylex.attrs(styles.steps)}>
-					{STEPS.map((step, index) => (
-						<li {...stylex.attrs(styles.step)}>
-							<span {...stylex.attrs(styles.stepNumber)}>0{index + 1}</span>
-							<h3 {...stylex.attrs(styles.cardTitle)}>{step.title}</h3>
-							<p {...stylex.attrs(styles.cardBody)}>{step.body}</p>
-							<code {...stylex.attrs(styles.stepCode)}>{step.code}</code>
-						</li>
-					))}
-				</ol>
-			</section>
-
-			<section {...stylex.attrs(styles.section)}>
-				<div {...stylex.attrs(styles.cta)}>
-					<div {...stylex.attrs(styles.ctaGlow)} />
-					<h2 {...stylex.attrs(styles.ctaTitle)}>Give your agent an inbox.</h2>
-					<p {...stylex.attrs(styles.ctaText)}>
-						Free to start. Sign in with GitHub when your client asks.
-					</p>
-					<div {...stylex.attrs(styles.ctaActions)}>
-						<ButtonLink href="/docs/mcp" variant="accent">
-							Connect over MCP
-						</ButtonLink>
-						<ButtonLink href="/docs/api" variant="outline">
-							Read the API docs
-						</ButtonLink>
-					</div>
-				</div>
-				<p {...stylex.attrs(styles.humans)}>
-					Need a throwaway inbox yourself, in the browser?{" "}
-					<a href="https://smail.pw" {...stylex.attrs(styles.humansLink)}>
-						Use smail.pw →
+			<section {...stylex.attrs(styles.container, styles.hero)}>
+				<h1 {...stylex.attrs(styles.title)}>
+					Email inboxes
+					<br />
+					<span {...stylex.attrs(styles.titleSecond)}>for AI agents.</span>
+				</h1>
+				<p {...stylex.attrs(styles.lead)}>
+					Give your agent its own address. It signs up, waits for the
+					verification email and reads the code — on its own.
+				</p>
+				<PromptBox />
+				<p {...stylex.attrs(styles.hint)}>
+					Paste it into Claude Code or Codex.{" "}
+					<a href="#setup" {...stylex.attrs(styles.hintLink)}>
+						Or set it up yourself
 					</a>
 				</p>
 			</section>
+
+			<div {...stylex.attrs(styles.container)}>
+				<div {...stylex.attrs(styles.demo)}>
+					<AgentDemo />
+				</div>
+
+				<div {...stylex.attrs(styles.features)}>
+					{FEATURES.map((feature) => (
+						<div {...stylex.attrs(styles.feature)}>
+							<h2 {...stylex.attrs(styles.featureTitle)}>{feature.title}</h2>
+							<p {...stylex.attrs(styles.featureBody)}>{feature.body}</p>
+						</div>
+					))}
+				</div>
+
+				<section id="setup" {...stylex.attrs(styles.setup)}>
+					<div>
+						<h2 {...stylex.attrs(styles.setupTitle)}>Set it up yourself</h2>
+						<p {...stylex.attrs(styles.setupText)}>
+							The same thing the sentence above asks your agent to do.
+						</p>
+					</div>
+					<CodeTabs tabs={MANUAL} />
+				</section>
+
+				<p {...stylex.attrs(styles.humans)}>
+					Need a throwaway inbox for yourself?{" "}
+					<a href="https://smail.pw" {...stylex.attrs(styles.hintLink)}>
+						Use smail.pw
+					</a>
+				</p>
+			</div>
 		</>
 	);
 }

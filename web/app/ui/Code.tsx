@@ -6,6 +6,7 @@ import { color, font, radius, space, text } from "./tokens.stylex.ts";
 const styles = stylex.create({
 	block: {
 		position: "relative",
+		overflow: "hidden",
 		maxWidth: "100%",
 		minWidth: 0,
 		marginBlock: space.lg,

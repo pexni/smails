@@ -44,13 +44,12 @@ export default function McpDocs() {
 			<H2>Claude Code</H2>
 			<CodeBlock
 				label="terminal"
-				code="claude mcp add --transport http smails https://smails.dev/mcp"
+				code="claude mcp add --transport http --scope user smails https://smails.dev/mcp"
 			/>
 			<P>
 				Then run <InlineCode>/mcp</InlineCode> inside Claude Code, pick{" "}
 				<strong>smails</strong> and sign in with GitHub in the browser window
-				that opens. Add <InlineCode>--scope user</InlineCode> to make it
-				available in every project.
+				that opens.
 			</P>
 
 			<H2>Codex</H2>
