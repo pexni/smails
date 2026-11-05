@@ -9,22 +9,27 @@ permissions:
   contents: read
 
 jobs:
-  lint-format:
+  check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
+      # pnpm 的版本取自根目录 package.json 的 packageManager。
       - uses: pnpm/action-setup@v4
-        with:
-          version: 11
 
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
 
       - run: pnpm install --frozen-lockfile
 
-      - name: Biome (lint + format check)
-        run: pnpm exec biome ci
+      # 类型检查 + oxlint + oxfmt
+      - run: pnpm run check
+
+      - run: pnpm --filter smails-web run build
+
+      # 测试用 .env.example 里的本地开发密钥；端到端测试会在本机启动 Worker 开发服务器。
+      - run: cp worker/.env.example worker/.env
+
+      - run: pnpm -r run test

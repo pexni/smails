@@ -383,6 +383,8 @@ mail 库里只有第 6.2 节的 `messages` 表。
 
 ## 12. 上线步骤与迁移
 
+> 可以照着执行的清单在 [launch.md](launch.md)，下面是概要。
+
 1. **准备工作（你来操作）**：建 GitHub OAuth App；建 D1 库 `smails-core`、`smails-mail`；建 R2 桶 `smails-mail`（先不加生命周期规则）；把 `GITHUB_CLIENT_ID`、`GITHUB_CLIENT_SECRET`、`TOKEN_SECRETS`、`ADDR_SECRET` 写进 `worker/.env.production`，首次部署时用 `cf deploy --prebuilt --secrets-file .env.production` 带上（以后单独改用 `cf workers secrets update`）。
 2. **开发**：在新分支上实现，用 `pnpm run dev`（Vite + `@cloudflare/vite-plugin`）和本地 D1 跑通，本地密钥放 `worker/.env`。单元测试覆盖令牌、PKCE、CIMD 校验、地址校验码；端到端测试覆盖登录 → 创建 → 发一封测试邮件 → `wait` → 读取。
 3. **用真实客户端验证**：在 staging（workers.dev）上，用 Claude Code、Claude Desktop、Cursor 实际走一遍远程 MCP 的登录。

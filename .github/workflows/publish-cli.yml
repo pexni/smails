@@ -12,51 +12,44 @@ permissions:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: cli
     steps:
       - uses: actions/checkout@v4
 
+      # pnpm 的版本取自根目录 package.json 的 packageManager。
       - uses: pnpm/action-setup@v4
-        with:
-          version: 11
 
       - uses: actions/setup-node@v4
         with:
           node-version: 24
           registry-url: https://registry.npmjs.org
           cache: pnpm
-          cache-dependency-path: cli/pnpm-lock.yaml
 
       # trusted publishing requires npm >= 11.5.1
       - run: npm install -g npm@latest
 
+      # The CLI is part of the pnpm workspace: install from the root lockfile.
       - run: pnpm install --frozen-lockfile
 
-      - run: pnpm run build
+      - run: pnpm --filter @smails/cli run build
 
       # OIDC auth is auto-detected; provenance is automatic for public repos
       - run: npm publish
+        working-directory: cli
 
       # --- Publish the MCP server to the official registry (OIDC, no secrets) ---
 
       - name: Install mcp-publisher
-        working-directory: ${{ github.workspace }}
         run: curl -L "https://github.com/modelcontextprotocol/registry/releases/latest/download/mcp-publisher_$(uname -s | tr '[:upper:]' '[:lower:]')_$(uname -m | sed 's/x86_64/amd64/;s/aarch64/arm64/').tar.gz" | tar xz mcp-publisher
 
       # Keep server.json's version in sync with the package we just published
       - name: Sync server.json version
-        working-directory: ${{ github.workspace }}
         run: |
           VERSION=$(node -p "require('./cli/package.json').version")
           jq --arg v "$VERSION" '.version = $v | .packages[0].version = $v' server.json > server.tmp
           mv server.tmp server.json
 
       - name: Authenticate to MCP Registry (GitHub OIDC)
-        working-directory: ${{ github.workspace }}
         run: ./mcp-publisher login github-oidc
 
       - name: Publish to MCP Registry
-        working-directory: ${{ github.workspace }}
         run: ./mcp-publisher publish

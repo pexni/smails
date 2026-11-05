@@ -2,60 +2,69 @@
 
 [![npm](https://img.shields.io/npm/v/@smails/cli?color=000)](https://www.npmjs.com/package/@smails/cli)
 
-**Disposable email for humans and AI agents.** A throwaway inbox you can drive from the terminal — or plug into any AI agent as an **MCP server**, so it can receive verification codes and emails on its own. No signup.
+**Disposable email for AI agents.** Create an inbox, use the address to sign up somewhere, and wait for the verification code — from a terminal, a script, or any MCP client.
 
 → **[smails.dev](https://smails.dev)**
 
-## CLI
+Requires Node.js 22.18 or newer. No runtime dependencies.
+
+## Sign in (once)
 
 ```bash
-npx @smails/cli create        # create a mailbox (token saved to ~/.smails)
-npx @smails/cli inbox         # list messages
-npx @smails/cli read <id>     # read a message (full id or short prefix)
-npx @smails/cli delete <id>   # delete a message
-npx @smails/cli whoami        # show the current address
-npx @smails/cli create --force  # replace with a fresh mailbox
+npx @smails/cli login
 ```
 
-Install globally for a shorter command:
+It prints a link and opens your browser: sign in with GitHub and confirm the code. The session is stored in `~/.config/smails/credentials.json` and shared with the MCP server below.
+
+## Get a verification code
 
 ```bash
-npm i -g @smails/cli
-smails create
+npx @smails/cli create                    # → brave-otter-k3j9x2m8@smails.dev
+npx @smails/cli wait --subject code       # blocks until it arrives, prints the message
+npx @smails/cli wait --json | jq -r .text # in scripts
 ```
 
-## MCP server (for AI agents)
+`wait` exits with status 2 if nothing arrives before `--timeout` (default 120 s).
 
-Add the server to any MCP client (e.g. Claude Desktop — `~/.claude/mcp.json`, Cursor, etc.):
+## Commands
+
+| Command | |
+| --- | --- |
+| `login` / `logout` / `whoami` | Account and today's quota |
+| `create` | New mailbox; becomes the current one |
+| `list` | Your active mailboxes |
+| `inbox [address]` | Messages (default: current mailbox) |
+| `read <id>` | One message (short id prefix works) |
+| `wait [address]` | Wait for new mail: `--from`, `--subject`, `--timeout`, `--since` |
+| `delete <id>` | Delete a message |
+| `mcp` | Run the MCP server over stdio |
+
+Add `--json` for machine-readable output. `npm i -g @smails/cli` to type `smails` instead of `npx @smails/cli`.
+
+## MCP server
+
+Remote (recommended): add `https://smails.dev/mcp` to your MCP client — it signs in with GitHub on first use.
+
+Local (stdio):
 
 ```json
 {
   "mcpServers": {
-    "smails": {
-      "command": "npx",
-      "args": ["@smails/cli", "mcp"]
-    }
+    "smails": { "command": "npx", "args": ["-y", "@smails/cli", "mcp"] }
   }
 }
 ```
 
-The agent can then create a mailbox and read incoming mail itself. Tools:
+Sign in with `npx @smails/cli login`, or let the agent call the `login` tool, which returns a link for you to confirm. Tools: `create_mailbox`, `wait_for_message`, `list_messages`, `read_message`, `list_mailboxes`, `delete_message`, `whoami`.
 
-| Tool | Description |
-|------|-------------|
-| `create_mailbox` | Create a throwaway mailbox |
-| `list_messages` | List messages in the current mailbox |
-| `read_message` | Read a message by id |
-| `delete_message` | Delete a message by id |
-| `get_address` | Get the current mailbox address |
+## Upgrading from 0.0.x
 
-## Config
+0.1 requires signing in; the anonymous API is gone and old saved mailboxes no longer work. Run `npx @smails/cli login`, then `create`.
 
-- The current mailbox (address + token) is stored in `~/.smails`.
-- `SMAILS_API_URL` overrides the API base URL (default `https://smails.dev`).
+## Environment
 
-## Links
+`SMAILS_URL` — server to use (default `https://smails.dev`).
 
-- Website: [smails.dev](https://smails.dev)
-- Source: [github.com/pexni/smails](https://github.com/pexni/smails)
-- License: MIT
+## License
+
+MIT

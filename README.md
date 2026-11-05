@@ -1,138 +1,102 @@
 # smails
 
 [![npm](https://img.shields.io/npm/v/@smails/cli?color=000&label=%40smails%2Fcli)](https://www.npmjs.com/package/@smails/cli)
-[![smails.dev](https://img.shields.io/badge/try-smails.dev-000)](https://smails.dev)
+[![smails.dev](https://img.shields.io/badge/docs-smails.dev-000)](https://smails.dev)
 [![MIT](https://img.shields.io/badge/license-MIT-000)](./LICENSE)
 
-**Disposable email for humans and AI agents.** An instant, anonymous throwaway inbox for sign-ups, one-time codes, and confirmations — with a REST API, a CLI, and an **MCP server**, so your AI agent can receive verification emails too. No signup, no password.
+**Disposable email for AI agents.** Your agent creates an inbox, signs up somewhere, and waits for the verification code or magic link — over a remote MCP server, a local MCP server, a CLI, or plain HTTP.
 
-→ **[smails.dev](https://smails.dev)** · `npx @smails/cli create`
+Looking for a throwaway inbox for yourself, in the browser? Use **[smail.pw](https://smail.pw)**.
 
-> Give your agent its own inbox: plug the MCP server into Claude, Cursor, or any MCP client and it can create a mailbox and read incoming mail (verification codes, magic links) on its own.
+## Use it
 
-## Features
-
-- **Instant inbox** — open the site and you have an address, zero clicks
-- **Real-time** — new mail arrives over WebSocket, no polling
-- **Built for agents** — REST API, CLI, and an MCP server share the same mailbox
-- **Multi-domain** — pick from configurable receiving domains
-- **Self-cleaning** — mailboxes auto-expire after 7 days of inactivity
-- **Serverless** — Cloudflare Workers + Durable Objects (one DO per mailbox, SQLite storage)
-
-## Quick start
-
-### Web
-
-Visit **[smails.dev](https://smails.dev)** — an inbox is created for you on first load.
-
-### CLI
+**Remote MCP** — add `https://smails.dev/mcp` to your MCP client. It opens a browser window once to sign in with GitHub.
 
 ```bash
-npx @smails/cli create      # create a mailbox (token saved to ~/.smails)
-npx @smails/cli inbox       # list messages
-npx @smails/cli read <id>   # read a message (id prefix is enough)
-npx @smails/cli whoami      # show the current address
-npx @smails/cli create --force  # replace with a fresh mailbox
+claude mcp add --transport http smails https://smails.dev/mcp
 ```
 
-### MCP (for AI agents)
-
-Add the server to any MCP client (e.g. Claude Desktop, `~/.claude/mcp.json`):
-
-```json
-{
-  "mcpServers": {
-    "smails": { "command": "npx", "args": ["@smails/cli", "mcp"] }
-  }
-}
-```
-
-Tools: `create_mailbox`, `list_messages`, `read_message`, `delete_message`, `get_address`.
-
-### REST API
+**CLI**
 
 ```bash
-# create a mailbox
-curl -X POST https://smails.dev/api/mailbox
-# → { "address": "...", "token": "..." }
-
-# list messages with the returned token
-curl https://smails.dev/api/mailbox/messages \
-  -H "Authorization: Bearer <token>"
+npx @smails/cli login                 # once: confirm in the browser
+npx @smails/cli create                # → brave-otter-k3j9x2m8@smails.dev
+npx @smails/cli wait --subject code   # blocks until the email arrives, prints it
 ```
 
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/mailbox` | Create a mailbox → `{ address, token }` |
-| `GET` | `/api/mailbox/messages` | List messages |
-| `GET` | `/api/mailbox/messages/:id` | Read a message (full parsed body) |
-| `DELETE` | `/api/mailbox/messages/:id` | Delete a message |
-| `WS` | `/api/mailbox/connect?token=` | Stream new-mail notifications |
+**Local MCP (stdio)** — `{ "command": "npx", "args": ["-y", "@smails/cli", "mcp"] }`
 
-Authenticate every request (except create) with `Authorization: Bearer <token>`.
+Docs: [MCP](https://smails.dev/docs/mcp) · [CLI](https://smails.dev/docs/cli) · [HTTP API](https://smails.dev/docs/api)
+
+Free: 20 new mailboxes per account per day; each lives for 7 days. Receive-only.
 
 ## How it works
 
 ```
-Inbound mail ──▶ Cloudflare Email Routing (catch-all)
-                          │
-                          ▼
-                  Worker  email() handler ──┐
-                                            ▼
-   Web / CLI / MCP ──REST + WS──▶  Durable Object  (one per mailbox)
-                                   ├─ SQLite (messages)
-                                   ├─ token auth
-                                   └─ 7-day alarm → cleanup
+                 ┌──────────────────────── Worker (smails.dev) ───────────────────────┐
+CLI / local MCP ─┤ /api/*   mail API (Bearer token, verified by signature, no lookup)  │
+remote MCP ──────┤ /mcp     MCP Streamable HTTP, stateless                             │
+browser ─────────┤ OAuth 2.1 server + device login, GitHub as the identity provider    │
+Email Routing ───┤ email()  raw → R2, metadata → D1, then notify InboxHub              │
+                 └───────────┬───────────────┬──────────────┬──────────────┬──────────┘
+                         D1 core         D1 mail         R2 raw mail   InboxHub (one DO,
+                         users, tokens,  message         (never        hibernating
+                         mailboxes,      metadata        deleted)      WebSockets)
+                         quota
 ```
 
-- Each mailbox is a single **Durable Object**, addressed by its name; messages live in the DO's SQLite.
-- The token is `{address}.{secret}`; the Worker routes by address, the DO verifies the full token.
-- A 7-day alarm wipes inactive mailboxes; any activity renews it.
+- **Sign-in is required.** Remote MCP clients use OAuth 2.1 with PKCE (Client ID Metadata Documents or dynamic registration); the CLI and local MCP use device authorization (RFC 8628). Both get the same tokens.
+- **Cheap per mailbox.** Creating a mailbox is one row; access tokens are verified by signature, so API calls never read KV or D1 to authenticate. Mail metadata (~250 bytes) goes to D1, the raw message to R2, and nothing is deleted.
+- **Waiting is push, not polling.** `wait` connects to a single hibernating Durable Object before checking D1, so it returns the moment mail arrives and costs one request however long it waits.
+- **Addresses carry a checksum**, so mail to addresses we never issued is dropped without a write.
 
-## Project structure
+The full design and the reasoning behind it: [docs/rewrite-design.md](docs/rewrite-design.md).
+
+## Repository
 
 ```
-frontend/   React Router SPA (prerendered) — Tailwind v4 + shadcn
-worker/     Cloudflare Worker + Durable Objects — Hono routing, postal-mime parsing
-cli/        npm package — CLI + MCP server (@smails/cli)
+site.config.ts   names and ids (domain, Worker, D1, R2) — the only place they are written
+web/             site: Solid 2 + StyleX, prerendered to static files
+worker/          Cloudflare Worker: API, MCP, OAuth, email handler (cloudflare.config.ts + cf CLI)
+cli/             @smails/cli: CLI and stdio MCP server (no runtime dependencies)
+docs/            design and launch notes
 ```
 
 ## Development
 
-Each package is independent (pnpm). Install per package.
+Node.js 22.18+ and pnpm.
 
 ```bash
-# frontend
-cd frontend && pnpm install && pnpm dev
+pnpm install
+cp worker/.env.example worker/.env   # local signing secrets; GitHub keys optional
+pnpm --filter smails-web run build   # the worker serves web/dist/client
+pnpm --filter smails-worker run dev  # http://localhost:8792 (D1/R2/DO simulated locally)
+```
 
-# worker (API + Durable Objects)
-cd worker && pnpm install && pnpm dev
+- Without a GitHub OAuth App, sign in locally at `http://localhost:8792/__dev/login?login=you&next=/account`. That route exists only in dev builds.
+- Simulate inbound mail: `curl -X POST "http://localhost:8792/cdn-cgi/local/email?from=a@example.com&to=<address>" --data-binary @message.eml`
+- Point the CLI at it: `SMAILS_URL=http://localhost:8792 node cli/dist/index.js login`
 
-# cli / mcp
-cd cli && pnpm install && pnpm build
-SMAILS_API_URL=http://localhost:8787 node dist/index.js create
+```bash
+pnpm run check        # types + oxlint + oxfmt
+pnpm -r run test      # unit tests + end-to-end tests against a real workerd dev server
 ```
 
 ## Deployment
 
-There are two independent release tracks — pushing to `main` ships the service, but **not** the CLI.
+Two independent tracks.
 
-**Worker + frontend** — auto-deployed by [Cloudflare Workers Builds](https://developers.cloudflare.com/workers/ci-cd/builds/) on every push to `main` (the frontend builds to static assets the Worker serves). No manual step. To deploy by hand instead:
+**Worker + site** — deployed by hand with the `cf` CLI (see [docs/launch.md](docs/launch.md) for the first launch):
 
 ```bash
-cd frontend && pnpm build         # → build/client
-cd ../worker && pnpm run deploy   # wrangler deploy — serves assets + API + DOs
+cd worker
+pnpm run deploy            # build web + worker, apply D1 migrations, cf deploy
+pnpm run deploy:staging    # same build as <name>-staging on workers.dev
 ```
 
-**CLI (`@smails/cli`) + MCP server** — *not* auto-deployed; publishing is a separate, manual release:
+**CLI (`@smails/cli`) + MCP registry listing** — bump `cli/package.json`, push, then `gh release create cli-vX.Y.Z --target main`. The release triggers `.github/workflows/publish-cli.yml` (npm with provenance, then the MCP registry from `server.json`; its `description` must stay ≤ 100 characters).
 
-1. Bump the version in `cli/package.json` (npm rejects re-publishing an existing version).
-2. Push to `main`.
-3. `gh release create cli-vX.Y.Z --target main` — creating the GitHub Release triggers `.github/workflows/publish-cli.yml`, which publishes to npm and syncs the [MCP registry](https://registry.modelcontextprotocol.io) listing from `server.json`.
-
-> `server.json`'s `description` must be ≤ 100 characters or the MCP registry publish step 422s.
-
-Receiving mail uses Cloudflare Email Routing (catch-all → the Worker's `email` handler). Configure receiving domains via the `DOMAINS` var and the route in `worker/wrangler.jsonc`.
+Operations: `pnpm --filter smails-worker run users | stats | ban <login> | unban <login>`.
 
 ## License
 
