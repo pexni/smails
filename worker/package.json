@@ -1,22 +1,27 @@
 {
-  "name": "worker",
-  "version": "0.0.0",
-  "private": true,
-  "packageManager": "pnpm@11.9.0",
-  "scripts": {
-    "deploy": "wrangler deploy",
-    "dev": "wrangler dev",
-    "start": "wrangler dev",
-    "cf-typegen": "wrangler types"
-  },
-  "devDependencies": {
-    "@types/node": "^26.0.0",
-    "typescript": "^5.5.2",
-    "wrangler": "^4.104.0"
-  },
-  "dependencies": {
-    "@scaleway/random-name": "^6.0.2",
-    "hono": "^4.12.27",
-    "postal-mime": "^2.7.4"
-  }
+	"name": "smails-worker",
+	"private": true,
+	"license": "MIT",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"preview": "vite build && vite preview --port 8793",
+		"cf-typegen": "cf workers types",
+		"typecheck": "pnpm run cf-typegen && tsc -p tsconfig.json",
+		"test": "vitest run",
+		"postinstall": "pnpm run cf-typegen"
+	},
+	"dependencies": {
+		"@modelcontextprotocol/sdk": "^1.32.2",
+		"postal-mime": "^4.2.0"
+	},
+	"devDependencies": {
+		"@cloudflare/vite-plugin": "2.0.0-beta.v.11",
+		"@types/node": "^26.6.6",
+		"cf": "1.0.0-beta.27",
+		"typescript": "^7.0.2",
+		"vite": "^8.3.5",
+		"vitest": "^5.1.0"
+	}
 }
