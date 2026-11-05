@@ -32,9 +32,31 @@ jobs:
 
       - run: pnpm --filter @smails/cli run build
 
-      # OIDC auth is auto-detected; provenance is automatic for public repos
-      - run: npm publish
+      # OIDC auth is auto-detected; provenance is automatic for public repos.
+      # Skip when this version is already on npm, so the workflow can be re-run
+      # (e.g. after the MCP registry step failed) without failing here.
+      - name: Publish to npm
         working-directory: cli
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          if npm view "@smails/cli@$VERSION" version >/dev/null 2>&1; then
+            echo "@smails/cli@$VERSION is already on npm; skipping"
+          else
+            npm publish
+          fi
+
+      # The MCP registry checks that the npm version exists, and a fresh publish
+      # takes a moment to appear: wait for it (up to 5 minutes).
+      - name: Wait for the version to appear on npm
+        run: |
+          VERSION=$(node -p "require('./cli/package.json').version")
+          for i in $(seq 1 30); do
+            npm view "@smails/cli@$VERSION" version >/dev/null 2>&1 && exit 0
+            echo "waiting for @smails/cli@$VERSION on npm ($i/30)…"
+            sleep 10
+          done
+          echo "@smails/cli@$VERSION did not appear on npm in time" >&2
+          exit 1
 
       # --- Publish the MCP server to the official registry (OIDC, no secrets) ---
 
